@@ -16,18 +16,6 @@ from ocsf_validator.processors import (
 from ocsf_validator.reader import MatchMode, Reader
 from ocsf_validator.types import *
 
-# [X] Required keys (including nested in attrs)
-# [X] No unknown keys
-# [X] Include files (and base records and profiles) exist
-# [ ] Categories match directories in events
-# [ ] Unused dictionary items
-# [ ] Unused enums
-# [ ] Valid types for attributes
-# [ ] Type Matching
-# [ ] Name collisions between extensions
-# [ ] Name collisions between objects and events
-# [ ] Redundant profiles and $include targets
-
 
 def validate_required_keys(reader: Reader, collector: Collector = Collector.default):
     """Validate that no required keys are missing."""
