@@ -1,4 +1,33 @@
-from typing import Optional
+from typing import Optional, TypeVar
+
+TCollector = TypeVar("TCollector", bound="Collector")
+
+
+class Collector:
+    default: TCollector
+
+    def __init__(self, throw: bool = True):
+        self._exceptions: list[Exception] = []
+        self._throw = throw
+
+    def handle(self, err: Exception):
+        self._exceptions.append(err)
+        if self._throw:
+            raise err
+
+    def exceptions(self):
+        return self._exceptions
+
+    def flush(self):
+        e = list(self._exceptions)
+        self._exceptions = []
+        return e
+
+    def __len__(self):
+        return len(self._exceptions)
+
+
+Collector.default = Collector()
 
 
 class ValidationError(Exception):
@@ -29,7 +58,7 @@ class UnknownKeyError(ValidationError):
         super().__init__(f"Unrecognized key '{key}' in {file}")
 
 
-class MissingDependencyError(Exception):
+class MissingDependencyError(ValidationError):
     def __init__(self, file: str, include: str, message: Optional[str] = None):
         self.file = file
         self.include = include

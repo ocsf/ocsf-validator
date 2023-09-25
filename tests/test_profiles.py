@@ -31,6 +31,14 @@ def reader():
             "name": "p3",
             "attributes": {"three": 3},
         },
+        "/extensions/one/profiles/p4.json": {
+            "name": "p4",
+            "attributes": {"three": 4},
+        },
+        "/extensions/one/objects/thing3.json": {
+            "name": "thing3",
+            "profiles": ["profiles/p4"],
+        },
     }
     r.set_data(data)
     return r
@@ -62,4 +70,12 @@ def test_profiles_filter():
 
     d = r["/objects/thing2.json"]
     assert "two" not in d["attributes"]
+    assert "three" in d["attributes"]
+
+
+def test_profiles_extn():
+    r = reader()
+    apply_profiles(r)
+
+    d = r["/extensions/one/objects/thing3.json"]
     assert "three" in d["attributes"]

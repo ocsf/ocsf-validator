@@ -1,6 +1,6 @@
 import pytest
 
-from ocsf_validator.processors import apply_extends
+from ocsf_validator.processors import apply_inheritance
 from ocsf_validator.reader import DictReader
 
 
@@ -23,7 +23,7 @@ def reader():
 
 def test_extends():
     r = reader()
-    apply_extends(r)
+    apply_inheritance(r)
 
     d = r["/objects/thing1.json"]
     assert "name" in d

@@ -6,6 +6,7 @@
 from typing import Any, Optional
 
 from ocsf_validator.errors import (
+    Collector,
     MissingBaseError,
     MissingIncludeError,
     MissingProfileError,
@@ -47,7 +48,13 @@ def find_attrs(defn: type) -> str | None:
     return None
 
 
-def apply_include(reader: Reader, update: bool = True, recurse: bool = True, remove: bool = False):
+def apply_include(
+    reader: Reader,
+    update: bool = True,
+    recurse: bool = True,
+    remove: bool = False,
+    collector: Collector = Collector.default,
+):
     """Process $include directives in a schema definition."""
 
     def include(defn: dict[str, Any], reader: Reader, key: str):
@@ -64,8 +71,8 @@ def apply_include(reader: Reader, update: bool = True, recurse: bool = True, rem
                 for target in targets:
                     t = reader.find_include(target, key)
                     if t is None:
-                        raise MissingIncludeError(key, target)
-                    if update:
+                        collector.handle(MissingIncludeError(key, target))
+                    elif update:
                         deep_merge(defn, reader[t])
 
                 if remove:
@@ -84,17 +91,19 @@ def apply_include(reader: Reader, update: bool = True, recurse: bool = True, rem
     reader.apply(fn, "events/*/*", MatchMode.GLOB)
 
 
-def apply_extends(reader: Reader, update: bool = True):
+def apply_inheritance(
+    reader: Reader, update: bool = True, collector: Collector = Collector.default
+):
     """Process `extends` directives in schema definitions found in a Reader."""
 
     def extends(reader: Reader, key: str):
         """Process extends directives in a schema definition."""
 
         if "extends" in reader[key]:
-            base = reader.find_include(reader[key]["extends"])
+            base = reader.find_base(reader[key]["extends"], key)
             if base is None:
-                raise MissingBaseError(key, reader[key]["extends"])
-            if update:
+                collector.handle(MissingBaseError(key, reader[key]["extends"]))
+            elif update:
                 deep_merge(reader[key], reader[base])
 
     reader.apply(extends, "objects/*", MatchMode.GLOB)
@@ -102,7 +111,12 @@ def apply_extends(reader: Reader, update: bool = True):
     reader.apply(extends, "events/*/*", MatchMode.GLOB)
 
 
-def apply_profiles(reader: Reader, white_list: Optional[list[str]] = None, update: bool = True):
+def apply_profiles(
+    reader: Reader,
+    white_list: Optional[list[str]] = None,
+    update: bool = True,
+    collector: Collector = Collector.default,
+):
     """Process profiles directives in a schema definition by merging them into
     a given record type."""
 
@@ -120,11 +134,11 @@ def apply_profiles(reader: Reader, white_list: Optional[list[str]] = None, updat
                 profiles = [profiles]
 
             for profile in profiles:
-                target = reader.find_include(profile, key)
+                target = reader.find_profile(profile, key)
                 if target is None:
-                    raise MissingProfileError(key, profile)
+                    collector.handle(MissingProfileError(key, profile))
 
-                if update and (white_list is None or target in allowed):
+                elif update and (white_list is None or target in allowed):
                     deep_merge(reader[key], reader[target])
 
     reader.apply(profiles, "objects/*", MatchMode.GLOB)
@@ -132,7 +146,7 @@ def apply_profiles(reader: Reader, white_list: Optional[list[str]] = None, updat
     reader.apply(profiles, "events/*/*", MatchMode.GLOB)
 
 
-def apply_attributes(reader: Reader):
+def apply_attributes(reader: Reader, collector: Collector = Collector.default):
     """Merge attribute details from the base dictionary.
 
     Attributes in OCSF are often only named in OCSF objects and events, with most

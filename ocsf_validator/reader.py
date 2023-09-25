@@ -36,7 +36,7 @@ class ReaderOptions:
     base_path: Optional[Path] = None
 
     """Recurse extensions."""
-    recurse_extensions: bool = True
+    read_extensions: bool = True
 
     """Method of matching keys for `map` and `apply`"""
     match_mode: int = MatchMode.GLOB
@@ -170,18 +170,23 @@ class Reader(ABC):
 
     def extension(self, key: str) -> str | None:
         """Extract the extension name from a given key/filepath."""
-        p = Path(key)
-        if p.parts[1] == "extensions":
-            return p.parts[2]
+        parts = list(Path(self.key(key)).parts)
+        if "extensions" in parts:
+            return parts[parts.index("extensions") + 1]
         else:
             return None
 
     def find_include(
         self, include: str, relative_to: Optional[str] = None
     ) -> str | None:
-        """Find a file from an OCSF $include or profiles directive."""
-        if include in self._data:
-            return include
+        """Find a file from an OCSF $include or profiles directive.
+
+        For a given file f, search:
+          extn/f
+          extn/f.json
+          f
+          f.json
+        """
 
         filenames = [include]
         if Path(include).suffix != ".json":
@@ -192,7 +197,7 @@ class Reader(ABC):
                 # Search extension for relative include path, e.g. /includes/thing.json -> /extensions/stuff/includes/thing.json
                 extn = self.extension(relative_to)
                 if extn is not None:
-                    k = self.key(extn, file)
+                    k = self.key("extensions", extn, file)
                     if k in self._data:
                         return k
 
@@ -201,6 +206,26 @@ class Reader(ABC):
                 return k
 
         return None
+
+    def find_profile(self, profile: str, relative_to: str) -> str | None:
+        """Find a file from an OCSF profiles directive.
+
+        For a given profile p, search:
+          extn/profiles/p
+          extn/profiles/p.json
+          profiles/p
+          profiles/p.json
+          extn/p
+          extn/p.json
+          p
+          p.json
+        """
+        file = self.find_include(profile, relative_to)
+        if file is None:
+            path = str(Path("profiles") / Path(profile))
+            file = self.find_include(path, relative_to)
+
+        return file
 
     def find_base(self, base: str, relative_to: str) -> str | None:
         """Find the location of a base record in an extends directive.
@@ -220,23 +245,21 @@ class Reader(ABC):
 
         # Search the current directory and each parent directory
         path = Path(relative_to)
+        extn = self.extension(relative_to)
+
         while path != path.parent:
             test = str(path / base)
             if test in self._data:
                 return test
+            elif extn is not None:
+                woextn = Path(*list(path.parts)[2:]) / base
+                test = str(woextn)
+                if test in self._data:
+                    return test
 
             path = path.parent
 
-        extn = self.extension(relative_to)
-        if extn is not None:
-            path = Path(relative_to)
-            # pop first two parts, repeat
-            #path = 
-
         return None
-
-
-
 
 
 class DictReader(Reader):
@@ -292,7 +315,7 @@ def _walk(path: Path, base: Path, options: ReaderOptions) -> SchemaData:
         elif entry.is_dir() and (
             entry.name in TRAVERSABLE_PATHS or entry.parent.name in TRAVERSABLE_PATHS
         ):
-            if entry.name == "extensions" and not options.recurse_extensions:
+            if entry.name == "extensions" and not options.read_extensions:
                 break
 
             data |= _walk(entry, base, options)

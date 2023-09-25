@@ -129,3 +129,4 @@ def test_extension():
 
     assert r.extension("/extensions/win/objects/os.json") == "win"
     assert r.extension("/objects/os.json") is None
+    assert r.extension("extensions/windows/events/registry_key.json") == "windows"

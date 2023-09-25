@@ -57,8 +57,8 @@ OcsfAttr = TypedDict(
 class OcsfExtension(TypedDict):
     uid: int
     name: str
-    path: str
     caption: str
+    path: NotRequired[str]
     version: NotRequired[str]
     description: NotRequired[str]
 
