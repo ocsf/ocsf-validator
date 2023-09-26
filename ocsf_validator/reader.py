@@ -15,6 +15,7 @@ from typing import Any, Callable, Dict, Iterable, Optional
 
 from ocsf_validator.errors import InvalidBasePathError
 from ocsf_validator.types import *
+from ocsf_validator.matchers import Matcher
 
 # TODO would os.PathLike be better?
 Pathable = str | Path
@@ -22,10 +23,7 @@ Pathable = str | Path
 # TODO refine Any in type signature
 SchemaData = Dict[str, Any]
 
-
-class MatchMode(IntEnum):
-    GLOB = 1
-    REGEX = 2
+Pattern = str | Matcher
 
 
 @dataclass
@@ -37,9 +35,6 @@ class ReaderOptions:
 
     read_extensions: bool = True
     """Recurse extensions."""
-
-    match_mode: int = MatchMode.GLOB
-    """Method of matching keys for `map` and `apply`"""
 
 
 class Reader(ABC):
@@ -117,53 +112,33 @@ class Reader(ABC):
 
         return list(matched)
 
-    def _glob(self, pattern: str) -> Iterable[str]:
-        for k in self._data.keys():
-            p = Path(k)
-            if p.match(pattern):
-                yield k
-
-    def _regex(self, pattern: str) -> Iterable[str]:
-        for k in self._data.keys():
-            if re.match(pattern, k) is not None:
-                yield k
-
-    def match(
-        self, pattern: Optional[str] = None, mode: Optional[int] = None
-    ) -> Iterable[str]:
+    def match(self, pattern: Optional[Pattern] = None) -> Iterable[str]:
         if pattern is None:
             return [k for k in self._data.keys()]
+        else:
+            pattern = Matcher.make(pattern)
+            for k in self._data.keys():
+                if pattern.match(k):
+                    yield k
 
-        mode = mode if mode is not None else self._options.match_mode
-        match mode:
-            case MatchMode.GLOB:
-                return self._glob(pattern)
-            case MatchMode.REGEX:
-                return self._regex(pattern)
-
-        return []
-
-    def apply(
-        self, op: Callable, target: Optional[str] = None, mode: Optional[int] = None
-    ) -> None:
+    def apply(self, op: Callable, pattern: Optional[Pattern] = None) -> None:
         """Apply a function to every 'file' in the schema, optionally if it
         matches a globbing expression `target`."""
 
-        for k in self.match(target, mode):
+        for k in self.match(pattern):
             op(self, k)
 
     def map(
         self,
         op: Callable,
-        target: Optional[str] = None,
+        pattern: Optional[Pattern] = None,
         accumulator: Any = None,
-        mode: Optional[int] = None,
     ) -> Any:
         """Apply a function to every 'file' in the schema, optionally if it
         matches a globbing expression `target`, and return the accumulated
         result."""
 
-        for k in self.match(target, mode):
+        for k in self.match(pattern):
             accumulator = op(self, k, accumulator)
 
         return accumulator

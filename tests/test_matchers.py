@@ -27,3 +27,13 @@ def test_event_matcher():
     assert m.match("/events/activity/network_activity.json")
     assert m.match("/extensions/win/events/activity/network_activity.json")
 
+def test_extension_matcher():
+    m = ExtensionMatcher()
+
+    assert m.match("/extensions/ext1/extension.json")
+    assert m.match("/extension.json") is False
+
+def test_make_matcher():
+    m = Matcher.make(".*thing.json")
+
+    assert m.match("thing.json")

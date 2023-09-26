@@ -2,15 +2,18 @@
 import re
 from abc import ABC
 from pathlib import Path
-from enum import IntEnum
-
-class MatchMode(IntEnum):
-    GLOB = 1
-    REGEX = 2
 
 class Matcher:
     def match(self, value: str):
         raise NotImplementedError()
+
+    @staticmethod
+    def make(pattern):
+        if isinstance(pattern, Matcher):
+            return pattern
+        else:
+            return RegexMatcher(pattern)
+
 
 class RegexMatcher(Matcher):
     def __init__(self, pattern: str | re.Pattern):
@@ -23,14 +26,12 @@ class RegexMatcher(Matcher):
         return self._pattern.match(value) is not None
 
 class GlobMatcher(Matcher):
-    def __init__(self, pattern: str | Path):
-        if isinstance(pattern, str):
-            self._pattern = Path(pattern)
-        else:
-            self._pattern = pattern
+    def __init__(self, pattern: str):
+        self._pattern = pattern
 
     def match(self, value: str):
-        return self._pattern.match(value)
+        path = Path(value)
+        return path.match(self._pattern)
 
 class DictionaryMatcher(RegexMatcher):
     def __init__(self):
@@ -43,3 +44,7 @@ class ObjectMatcher(RegexMatcher):
 class EventMatcher(RegexMatcher):
     def __init__(self):
         self._pattern = re.compile(r".*/events/.*json")
+
+class ExtensionMatcher(GlobMatcher):
+    def __init__(self):
+        self._pattern = "extensions/*/extension.json"

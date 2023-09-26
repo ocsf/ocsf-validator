@@ -2,7 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from ocsf_validator.reader import DictReader, MatchMode, Reader, ReaderOptions
+from ocsf_validator.matchers import GlobMatcher
+from ocsf_validator.reader import DictReader, Reader
+
 
 event = {"name": "an event"}
 obj = {"name": "an object"}
@@ -19,52 +21,6 @@ def reader():
     r = DictReader()
     r.set_data(data)
     return r
-
-
-def test_glob():
-    r = reader()
-    matches = list(r.match("objects/*"))
-    assert "/objects/os.json" in matches
-    assert "/extensions/win/objects/win_process.json" in matches
-    assert "/events/base_event.json" not in matches
-
-
-def test_glob_no_extn():
-    r = reader()
-    matches = list(r.match("/objects/*"))
-    assert "/objects/os.json" in matches
-    assert "/extensions/win/objects/win_process.json" not in matches
-    assert "/events/base_event.json" not in matches
-
-
-def test_glob_no_root():
-    r = reader()
-    matches = list(r.match("/extensions/*/objects/*"))
-    assert "/objects/os.json" not in matches
-    assert "/extensions/win/objects/win_process.json" in matches
-    assert "/events/base_event.json" not in matches
-
-
-def test_regex():
-    opts = ReaderOptions(match_mode=MatchMode.REGEX)
-    r = DictReader(opts)
-    r.set_data(data)
-
-    matches = list(r.match(".*objects/.*json"))
-    assert "/objects/os.json" in matches
-    assert "/extensions/win/objects/win_process.json" in matches
-    assert "/events/base_event.json" not in matches
-
-
-def test_regex_no_extn():
-    opts = ReaderOptions(match_mode=MatchMode.REGEX)
-    r = DictReader(opts)
-    r.set_data(data)
-
-    matches = list(r.match("/objects/.*json"))
-    assert "/objects/os.json" in matches
-    assert "/extensions/win/objects/win_process.json" not in matches
-    assert "/events/base_event.json" not in matches
 
 
 def test_get_item():
@@ -85,7 +41,7 @@ def test_apply():
     def mark(reader: Reader, key: str):
         reader[key]["test"] = True
 
-    r.apply(mark, "objects/*")
+    r.apply(mark, GlobMatcher("objects/*"))
     assert r["/objects/os.json"]["test"] == True
     assert r["/extensions/win/objects/win_process.json"]["test"] == True
 
@@ -102,7 +58,7 @@ def test_map():
     def f(reader: Reader, key: str, acc: int):
         return acc + 1
 
-    matches = r.map(f, "objects/*", 0)
+    matches = r.map(f, GlobMatcher("objects/*"), 0)
     assert matches == 2
 
 

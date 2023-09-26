@@ -7,8 +7,9 @@ from ocsf_validator.errors import (Collector, InvalidMetaSchemaError,
                                    UnusedAttributeError)
 from ocsf_validator.processors import (apply_include, apply_inheritance,
                                        apply_profiles, find_attrs)
-from ocsf_validator.reader import MatchMode, Reader
+from ocsf_validator.reader import Reader
 from ocsf_validator.types import *
+from ocsf_validator.matchers import ObjectMatcher, EventMatcher, ExtensionMatcher, DictionaryMatcher
 
 
 def validate_required_keys(reader: Reader, collector: Collector = Collector.default):
@@ -38,11 +39,9 @@ def validate_required_keys(reader: Reader, collector: Collector = Collector.defa
 
         return validate
 
-    reader.apply(_validator(OcsfObject), "objects/*", MatchMode.GLOB)
-    reader.apply(_validator(OcsfEvent), "events/*/*", MatchMode.GLOB)
-    reader.apply(
-        _validator(OcsfExtension), "extensions/*/extension.json", MatchMode.GLOB
-    )
+    reader.apply(_validator(OcsfObject), ObjectMatcher())
+    reader.apply(_validator(OcsfEvent), EventMatcher())
+    reader.apply(_validator(OcsfExtension), ExtensionMatcher())
 
 
 def validate_no_unknown_keys(reader: Reader, collector: Collector = Collector.default):
@@ -57,11 +56,11 @@ def validate_no_unknown_keys(reader: Reader, collector: Collector = Collector.de
 
         return validate
 
-    reader.apply(_validator(OcsfObject), "objects/*", MatchMode.GLOB)
-    reader.apply(_validator(OcsfEvent), "events/*/*", MatchMode.GLOB)
-    reader.apply(_validator(OcsfDictionary), "dictionary.json", MatchMode.GLOB)
+    reader.apply(_validator(OcsfObject), ObjectMatcher())
+    reader.apply(_validator(OcsfEvent), EventMatcher())
+    reader.apply(_validator(OcsfDictionary), DictionaryMatcher())
     reader.apply(
-        _validator(OcsfExtension), "extensions/*/extension.json", MatchMode.GLOB
+        _validator(OcsfExtension), ExtensionMatcher()
     )
 
 
@@ -99,9 +98,9 @@ def validate_unused_attrs(reader: Reader, collector: Collector = Collector.defau
 
         return validate
 
-    attrs = reader.map(make_validator(OcsfObject), "objects/*", set())
+    attrs = reader.map(make_validator(OcsfObject), ObjectMatcher(), set())
     attrs |= reader.map(
-        make_validator(OcsfEvent), ".*events/.*", set(), mode=MatchMode.REGEX
+        make_validator(OcsfEvent), EventMatcher(), set()
     )
 
     d = reader.find("dictionary.json")

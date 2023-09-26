@@ -7,9 +7,10 @@ from typing import Any, Optional
 
 from ocsf_validator.errors import (Collector, MissingBaseError,
                                    MissingIncludeError, MissingProfileError)
-from ocsf_validator.reader import MatchMode, Reader
+from ocsf_validator.reader import Reader
 from ocsf_validator.types import (OcsfAttr, OcsfDictionary, OcsfEvent,
                                   OcsfObject)
+from ocsf_validator.matchers import DictionaryMatcher, ObjectMatcher, EventMatcher
 
 
 def deep_merge(d1: dict[str, Any], *others: dict[str, Any], exclude: list[str] = []):
@@ -83,9 +84,8 @@ def apply_include(
         the processing options passed to includefn()."""
         include(reader[key], reader, key)
 
-    reader.apply(fn, "objects/*", MatchMode.GLOB)
-    reader.apply(fn, "events/*", MatchMode.GLOB)
-    reader.apply(fn, "events/*/*", MatchMode.GLOB)
+    reader.apply(fn, ObjectMatcher())
+    reader.apply(fn, EventMatcher())
 
 
 def apply_inheritance(
@@ -103,9 +103,8 @@ def apply_inheritance(
             elif update:
                 deep_merge(reader[key], reader[base])
 
-    reader.apply(extends, "objects/*", MatchMode.GLOB)
-    reader.apply(extends, "events/*", MatchMode.GLOB)
-    reader.apply(extends, "events/*/*", MatchMode.GLOB)
+    reader.apply(extends, ObjectMatcher())
+    reader.apply(extends, EventMatcher())
 
 
 def apply_profiles(
@@ -138,9 +137,8 @@ def apply_profiles(
                 elif update and (white_list is None or target in allowed):
                     deep_merge(reader[key], reader[target])
 
-    reader.apply(profiles, "objects/*", MatchMode.GLOB)
-    reader.apply(profiles, "events/*", MatchMode.GLOB)
-    reader.apply(profiles, "events/*/*", MatchMode.GLOB)
+    reader.apply(profiles, ObjectMatcher())
+    reader.apply(profiles, EventMatcher())
 
 
 def apply_attributes(reader: Reader, collector: Collector = Collector.default):
@@ -181,6 +179,5 @@ def apply_attributes(reader: Reader, collector: Collector = Collector.default):
 
         return merge_attrs
 
-    reader.apply(attributes(OcsfObject), "objects/*", MatchMode.GLOB)
-    reader.apply(attributes(OcsfEvent), "events/*", MatchMode.GLOB)
-    reader.apply(attributes(OcsfEvent), "events/*/*", MatchMode.GLOB)
+    reader.apply(attributes(OcsfObject), ObjectMatcher())
+    reader.apply(attributes(OcsfEvent), EventMatcher())
