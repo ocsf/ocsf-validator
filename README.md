@@ -41,8 +41,16 @@ If you're adding a validator, do the following:
 
 ## TODO
 
+### Processors
+
+ - [ ] Refactor optional match mode parameters to be a Match object with a Pattern type of str | Match.
+ - [ ] Canned patterns for event, object, etc.
+ - [ ] Type detection of records based on key.
+ - [ ] Exclude keys that match the included record type (e.g. OcsfProfile) but not the destination record type for flavors of include.
+
 ### General
 
+ - [ ] Include all paths in validators
  - [ ] Write a shell script to run the ValidationRunner.
  - [ ] Are things named consistently across (and within) modules?
  - [ ] Inline documentation could be better.

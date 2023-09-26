@@ -6,6 +6,7 @@ from ocsf_validator.errors import (
     InvalidMetaSchemaError,
     MissingRequiredKeyError,
     UnknownKeyError,
+    UnusedAttributeError,
 )
 from ocsf_validator.processors import (
     apply_include,
@@ -45,6 +46,7 @@ def validate_required_keys(reader: Reader, collector: Collector = Collector.defa
         return validate
 
     reader.apply(_validator(OcsfObject), "objects/*", MatchMode.GLOB)
+    reader.apply(_validator(OcsfEvent), "events/*/*", MatchMode.GLOB)
     reader.apply(
         _validator(OcsfExtension), "extensions/*/extension.json", MatchMode.GLOB
     )
@@ -63,6 +65,8 @@ def validate_no_unknown_keys(reader: Reader, collector: Collector = Collector.de
         return validate
 
     reader.apply(_validator(OcsfObject), "objects/*", MatchMode.GLOB)
+    reader.apply(_validator(OcsfEvent), "events/*/*", MatchMode.GLOB)
+    reader.apply(_validator(OcsfDictionary), "dictionary.json", MatchMode.GLOB)
     reader.apply(
         _validator(OcsfExtension), "extensions/*/extension.json", MatchMode.GLOB
     )
@@ -85,3 +89,26 @@ def validate_profiles(
 ):
     # Raises MissingProfileError
     apply_profiles(reader, update=False, collector=collector)
+
+
+def validate_unused_attrs(reader: Reader, collector: Collector = Collector.default):
+    def make_validator(defn: type):
+        attrs = find_attrs(defn)
+        def validate(reader: Reader, key: str, accum: set[str]):
+            record = reader[key]
+            if attrs is not None and attrs in record:
+                return accum | set([k for k in record[attrs]]) # should it be defn[attrs][k]['name'] ?
+            else:
+                return accum
+        return validate
+
+    attrs = reader.map(make_validator(OcsfObject), "objects/*", set())
+    attrs |= reader.map(make_validator(OcsfEvent), ".*events/.*", set(), mode=MatchMode.REGEX)
+
+    d = reader.find("dictionary.json")
+    attr_key = find_attrs(OcsfDictionary)
+
+    for k in d[attr_key]:
+        if k not in attrs:
+            collector.handle(UnusedAttributeError(k))
+

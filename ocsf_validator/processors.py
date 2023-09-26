@@ -15,7 +15,7 @@ from ocsf_validator.reader import MatchMode, Reader
 from ocsf_validator.types import OcsfAttr, OcsfDictionary, OcsfEvent, OcsfObject
 
 
-def deep_merge(d1: dict[str, Any], *others: dict[str, Any]):
+def deep_merge(d1: dict[str, Any], *others: dict[str, Any], exclude: list[str] = []):
     """Recursive merging of dictionary keys.
 
     `d1 | d2 [| dn]` is more readable, but it doesn't merge recursively. If
@@ -24,7 +24,7 @@ def deep_merge(d1: dict[str, Any], *others: dict[str, Any]):
     dictionary. And thus this recursive merge."""
     for d in others:
         for k, v in d.items():
-            if k in d1 and isinstance(v, dict):
+            if k in d1 and k not in exclude and isinstance(v, dict):
                 deep_merge(d1[k], d[k])
 
             elif k not in d1:

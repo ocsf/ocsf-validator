@@ -32,14 +32,14 @@ class MatchMode(IntEnum):
 class ReaderOptions:
     """Options to control the behavior of a Reader."""
 
-    """The base path from which to load the schema."""
     base_path: Optional[Path] = None
+    """The base path from which to load the schema."""
 
-    """Recurse extensions."""
     read_extensions: bool = True
+    """Recurse extensions."""
 
-    """Method of matching keys for `map` and `apply`"""
     match_mode: int = MatchMode.GLOB
+    """Method of matching keys for `map` and `apply`"""
 
 
 class Reader(ABC):
@@ -87,7 +87,7 @@ class Reader(ABC):
     def __getitem__(self, key: str):
         return self._data[key]
 
-    def find(self, *parts: str) -> Any | None:
+    def find(self, *parts: str) -> SchemaData | None:
         try:
             return self.__getitem__(self.key(*parts))
         except KeyError:

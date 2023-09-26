@@ -43,6 +43,10 @@ class InvalidBasePathError(ValidationError):
 class InvalidMetaSchemaError(ValidationError):
     ...
 
+class UnusedAttributeError(ValidationError):
+    def __init__(self, attr: str):
+        self.attr = attr
+        super().__init__(f"Unused attribute {attr}")
 
 class MissingRequiredKeyError(ValidationError):
     def __init__(self, key: str, file: str):

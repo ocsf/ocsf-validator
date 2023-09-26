@@ -56,3 +56,40 @@ def test_validate_profiles():
     r.set_data({"/objects/thing.json": {"profiles": "nah"}})
     with pytest.raises(MissingProfileError):
         validate_profiles(r)
+
+def test_validate_unused_attrs():
+    r = DictReader()
+    r.set_data({
+        "/dictionary.json": {
+            "attributes": {
+                "one": {
+                    "name": "one",
+                    "caption": "One",
+                },
+                "two": {
+                    "name": "two",
+                    "caption": "Two",
+                },
+                "three": {
+                    "name": "three",
+                    "caption": "Three",
+                },
+            },
+        },
+        "/objects/thing.json": {
+            "name": "thing",
+            "attributes": {
+                "one": { "name": "one" },
+            },
+        },
+        "/events/stuff/another-thing.json": {
+            "name": "thing",
+            "attributes": {
+                "two": { "name": "two" },
+            },
+        }
+    })
+
+    with pytest.raises(UnusedAttributeError) as exc:
+        validate_unused_attrs(r)
+    assert exc.value.attr == "three"
