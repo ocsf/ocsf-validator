@@ -8,24 +8,18 @@ from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
 from typing import Optional
+
 from termcolor import colored
 
 import ocsf_validator.errors as errors
-from ocsf_validator.processors import (
-    apply_attributes,
-    apply_include,
-    apply_inheritance,
-    apply_profiles,
-)
+from ocsf_validator.processors import (apply_attributes, apply_include,
+                                       apply_inheritance, apply_profiles)
 from ocsf_validator.reader import FileReader, ReaderOptions
-from ocsf_validator.validators import (
-    validate_includes,
-    validate_inheritance,
-    validate_no_unknown_keys,
-    validate_profiles,
-    validate_required_keys,
-    validate_unused_attrs,
-)
+from ocsf_validator.validators import (validate_includes, validate_inheritance,
+                                       validate_no_unknown_keys,
+                                       validate_profiles,
+                                       validate_required_keys,
+                                       validate_unused_attrs)
 
 
 class Severity(IntEnum):
@@ -82,6 +76,7 @@ class SeverityOptions:
             case _:
                 return Severity.IGNORE
 
+
 @dataclass
 class ValidatorOptions(SeverityOptions):
     """Configure validator behavior."""
@@ -104,7 +99,6 @@ class ValidatorOptions(SeverityOptions):
     allowed_profiles: Optional[list[str]] = None
     """White list of profiles to include in validation. If None, all profiles
     are inspected."""
-
 
 
 class ValidationRunner:
@@ -170,13 +164,13 @@ class ValidationRunner:
             test(
                 "Valid `$include` targets",
                 lambda: validate_includes(reader, collector),
-                self.options.missing_include
+                self.options.missing_include,
             )
 
             test(
                 "Valid `extends` targets",
                 lambda: validate_inheritance(reader, collector),
-                self.options.missing_inheritance
+                self.options.missing_inheritance,
             )
 
             test(
@@ -184,7 +178,7 @@ class ValidationRunner:
                 lambda: validate_profiles(
                     reader, self.options.allowed_profiles, collector=collector
                 ),
-                self.options.missing_profile
+                self.options.missing_profile,
             )
 
             # Process dependencies
@@ -214,20 +208,27 @@ class ValidationRunner:
                 self.options.unknown_key,
             )
 
-            test("No unused attributes",
-                 lambda: validate_unused_attrs(reader, collector),
-                 self.options.unused_attribute,
+            test(
+                "No unused attributes",
+                lambda: validate_unused_attrs(reader, collector),
+                self.options.unused_attribute,
             )
-
 
         except Exception as err:
             print("Encountered an unexpected exception:")
             traceback.print_exception(err)
 
         finally:
-            labels = {Severity.WARN: "WARNING", Severity.ERROR: "ERROR",
-                          Severity.CRASH: "HALT"}
-            colors = {Severity.WARN: "yellow", Severity.ERROR: "red", Severity.CRASH: "magenta"}
+            labels = {
+                Severity.WARN: "WARNING",
+                Severity.ERROR: "ERROR",
+                Severity.CRASH: "HALT",
+            }
+            colors = {
+                Severity.WARN: "yellow",
+                Severity.ERROR: "red",
+                Severity.CRASH: "magenta",
+            }
 
             for k in messages:
                 if len(messages[k].items()) > 0:

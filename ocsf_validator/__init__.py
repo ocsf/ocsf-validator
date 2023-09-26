@@ -3,6 +3,6 @@
 from .errors import *
 from .processors import *
 from .reader import DictReader, FileReader, Reader
-from .runner import ValidatorOptions, ValidationRunner
+from .runner import ValidationRunner, ValidatorOptions
 from .types import *
 from .validators import *

@@ -1,19 +1,12 @@
 import inspect
-from typing import Dict, NotRequired, Optional, Required, get_type_hints, is_typeddict
+from typing import (Dict, NotRequired, Optional, Required, get_type_hints,
+                    is_typeddict)
 
-from ocsf_validator.errors import (
-    Collector,
-    InvalidMetaSchemaError,
-    MissingRequiredKeyError,
-    UnknownKeyError,
-    UnusedAttributeError,
-)
-from ocsf_validator.processors import (
-    apply_include,
-    apply_inheritance,
-    apply_profiles,
-    find_attrs,
-)
+from ocsf_validator.errors import (Collector, InvalidMetaSchemaError,
+                                   MissingRequiredKeyError, UnknownKeyError,
+                                   UnusedAttributeError)
+from ocsf_validator.processors import (apply_include, apply_inheritance,
+                                       apply_profiles, find_attrs)
 from ocsf_validator.reader import MatchMode, Reader
 from ocsf_validator.types import *
 
@@ -94,16 +87,22 @@ def validate_profiles(
 def validate_unused_attrs(reader: Reader, collector: Collector = Collector.default):
     def make_validator(defn: type):
         attrs = find_attrs(defn)
+
         def validate(reader: Reader, key: str, accum: set[str]):
             record = reader[key]
             if attrs is not None and attrs in record:
-                return accum | set([k for k in record[attrs]]) # should it be defn[attrs][k]['name'] ?
+                return accum | set(
+                    [k for k in record[attrs]]
+                )  # should it be defn[attrs][k]['name'] ?
             else:
                 return accum
+
         return validate
 
     attrs = reader.map(make_validator(OcsfObject), "objects/*", set())
-    attrs |= reader.map(make_validator(OcsfEvent), ".*events/.*", set(), mode=MatchMode.REGEX)
+    attrs |= reader.map(
+        make_validator(OcsfEvent), ".*events/.*", set(), mode=MatchMode.REGEX
+    )
 
     d = reader.find("dictionary.json")
     attr_key = find_attrs(OcsfDictionary)
@@ -111,4 +110,3 @@ def validate_unused_attrs(reader: Reader, collector: Collector = Collector.defau
     for k in d[attr_key]:
         if k not in attrs:
             collector.handle(UnusedAttributeError(k))
-

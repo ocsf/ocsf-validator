@@ -89,10 +89,12 @@ def test_apply():
     assert r["/objects/os.json"]["test"] == True
     assert r["/extensions/win/objects/win_process.json"]["test"] == True
 
+
 def test_find():
     r = reader()
     f = r.find("objects", "os.json")
     assert "name" in f
+
 
 def test_map():
     r = reader()
