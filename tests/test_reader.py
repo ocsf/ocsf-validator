@@ -5,7 +5,6 @@ import pytest
 from ocsf_validator.matchers import GlobMatcher
 from ocsf_validator.reader import DictReader, Reader
 
-
 event = {"name": "an event"}
 obj = {"name": "an object"}
 data = {

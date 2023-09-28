@@ -5,12 +5,15 @@
 
 from typing import Any, Optional
 
-from ocsf_validator.errors import (Collector, MissingBaseError,
-                                   MissingIncludeError, MissingProfileError)
+from ocsf_validator.errors import (
+    Collector,
+    MissingBaseError,
+    MissingIncludeError,
+    MissingProfileError,
+)
+from ocsf_validator.matchers import DictionaryMatcher, EventMatcher, ObjectMatcher
 from ocsf_validator.reader import Reader
-from ocsf_validator.types import (OcsfAttr, OcsfDictionary, OcsfEvent,
-                                  OcsfObject)
-from ocsf_validator.matchers import DictionaryMatcher, ObjectMatcher, EventMatcher
+from ocsf_validator.types import OcsfAttr, OcsfDictionary, OcsfEvent, OcsfObject
 
 
 def deep_merge(d1: dict[str, Any], *others: dict[str, Any], exclude: list[str] = []):

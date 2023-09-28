@@ -12,14 +12,15 @@ from typing import Optional
 from termcolor import colored
 
 import ocsf_validator.errors as errors
-from ocsf_validator.processors import (apply_attributes, apply_include,
-                                       apply_inheritance, apply_profiles)
+from ocsf_validator.processor import process_includes
+from ocsf_validator.type_mapping import TypeMapping
 from ocsf_validator.reader import FileReader, ReaderOptions
-from ocsf_validator.validators import (validate_includes, validate_inheritance,
-                                       validate_no_unknown_keys,
-                                       validate_profiles,
-                                       validate_required_keys,
-                                       validate_unused_attrs)
+from ocsf_validator.validators import (
+    validate_include_targets,
+    validate_no_unknown_keys,
+    validate_required_keys,
+    validate_unused_attrs,
+)
 
 
 class Severity(IntEnum):
@@ -55,6 +56,18 @@ class SeverityOptions:
     unused_attribute: int = Severity.WARN
     """An attribute in `dictionary.json` is unused."""
 
+    self_inheritance: int = Severity.WARN
+    """Attempting to `extend` the current record."""
+
+    redundant_profile_include: int = Severity.IGNORE
+    """Redundant profiles and $include target."""
+
+    undetectable_type: int = Severity.WARN
+    """Unable to detect type of file."""
+
+    include_type_mismatch: int = Severity.WARN
+    """Unexpected include type."""
+
     def severity(self, err: errors.ValidationError):
         match type(err):
             case errors.MissingRequiredKeyError:
@@ -73,6 +86,14 @@ class SeverityOptions:
                 return self.invalid_metaschema
             case errors.InvalidBasePathError:
                 return self.invalid_path
+            case errors.SelfInheritanceError:
+                return self.self_inheritance
+            case errors.RedundantProfileIncludeError:
+                return self.redundant_profile_include
+            case errors.UndetectableTypeError:
+                return self.undetectable_type
+            case errors.IncludeTypeMismatchError:
+                return self.include_type_mismatch
             case _:
                 return Severity.IGNORE
 
@@ -86,19 +107,6 @@ class ValidatorOptions(SeverityOptions):
 
     extensions: bool = True
     """Include the contents of extensions."""
-
-    inheritance: bool = True
-    """Include the contents of extends directives."""
-
-    profiles: bool = True
-    """Include the contents of profiles."""
-
-    includes: bool = True
-    """Include the contents of $include directives."""
-
-    allowed_profiles: Optional[list[str]] = None
-    """White list of profiles to include in validation. If None, all profiles
-    are inspected."""
 
 
 class ValidationRunner:
@@ -115,16 +123,15 @@ class ValidationRunner:
         messages: dict[str, dict[int, set[str]]] = {}
         collector = errors.Collector(throw=False)
 
-        def test(label: str, code: callable, severity: int = -1):
-            if severity > Severity.IGNORE:
-                message: str = ""
-                code()
+        def test(label: str, code: callable):
+            message: str = ""
+            code()
 
-                if len(collector) > 0:
-                    print(colored("FAILED", "red"), end="")
-                    for err in collector.exceptions():
-                        severity = self.options.severity(err)
-
+            if len(collector) > 0:
+                print(colored("FAILED", "red"), end="")
+                for err in collector:
+                    severity = self.options.severity(err)
+                    if severity > Severity.IGNORE:
                         if label not in messages:
                             messages[label] = {}
                         if severity not in messages[label]:
@@ -139,12 +146,12 @@ class ValidationRunner:
                             case Severity.CRASH:
                                 exit(10)
 
-                    collector.flush()
+                collector.flush()
 
-                else:
-                    print(colored("SUCCESS", "green"), end="")
+            else:
+                print(colored("SUCCESS", "green"), end="")
 
-                print(" ", colored(label, "white"))
+            print(" ", colored(label, "white"))
 
         try:
             print(f"Validating OCSF schema at {self.options.base_path}")
@@ -158,40 +165,20 @@ class ValidationRunner:
                 reader = FileReader(opts)
             except errors.ValidationError as err:
                 collector.handle(err)
-            test("Schema can be loaded", lambda: None, Severity.CRASH)
+            test("Schema can be loaded", lambda: None)
+
+            types = TypeMapping(reader, collector)
+            test("Schema types can be inferred", lambda: None)
 
             # Validate dependencies
             test(
-                "Valid `$include` targets",
-                lambda: validate_includes(reader, collector),
-                self.options.missing_include,
-            )
-
-            test(
-                "Valid `extends` targets",
-                lambda: validate_inheritance(reader, collector),
-                self.options.missing_inheritance,
-            )
-
-            test(
-                "Valid `profiles` targets",
-                lambda: validate_profiles(
-                    reader, self.options.allowed_profiles, collector=collector
+                "Valid include targets",
+                lambda: validate_include_targets(
+                    reader, collector=collector, types=types
                 ),
-                self.options.missing_profile,
             )
 
-            # Process dependencies
-            if self.options.includes:
-                apply_include(reader, collector=collector)
-
-            if self.options.inheritance:
-                apply_inheritance(reader, collector=collector)
-
-            if self.options.profiles:
-                apply_profiles(
-                    reader, self.options.allowed_profiles, collector=collector
-                )
+            process_includes(reader, collector=collector, types=types)
 
             # Any errors since the last test were duplicates; ignore them
             collector.flush()
@@ -199,20 +186,22 @@ class ValidationRunner:
             # Validate keys
             test(
                 "Required keys are present",
-                lambda: validate_required_keys(reader, collector),
-                self.options.missing_key,
+                lambda: validate_required_keys(
+                    reader, collector=collector, types=types
+                ),
             )
+
+            """
             test(
                 "No unrecognized keys",
-                lambda: validate_no_unknown_keys(reader, collector),
-                self.options.unknown_key,
+                lambda: validate_no_unknown_keys(reader, collector=collector, types=types),
             )
 
             test(
                 "No unused attributes",
-                lambda: validate_unused_attrs(reader, collector),
-                self.options.unused_attribute,
+                lambda: validate_unused_attrs(reader, collector=collector, types=types),
             )
+            """
 
         except Exception as err:
             print("Encountered an unexpected exception:")

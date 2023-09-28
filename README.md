@@ -53,12 +53,13 @@ If you're adding a validator, do the following:
 
 ### Processors
 
- - [ ] Refactor optional match mode parameters to be a Match object with a Pattern type of str | Match.
- - [ ] Canned patterns for event, object, etc.
- - [ ] Type detection of records based on key.
- - [ ] Cyclical dependencies...
+ - [X] Refactor optional match mode parameters to be a Match object with a Pattern type of str | Match.
+ - [X] Canned patterns for event, object, etc.
+ - [X] Type detection of records based on key.
+ - [X] Cyclical dependencies...
  - [ ] Exclude keys that match the included record type (e.g. OcsfProfile) but not the destination record type for flavors of include.
-
+ - [ ] Refactor find_include, etc., from Reader to MergeParsers
+ - [ ] Refactor reader and processor unit tests
 
 ### Runner
 

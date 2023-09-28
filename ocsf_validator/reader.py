@@ -14,8 +14,8 @@ from pathlib import Path, PurePath
 from typing import Any, Callable, Dict, Iterable, Optional
 
 from ocsf_validator.errors import InvalidBasePathError
-from ocsf_validator.types import *
 from ocsf_validator.matchers import Matcher
+from ocsf_validator.types import *
 
 # TODO would os.PathLike be better?
 Pathable = str | Path
@@ -94,6 +94,9 @@ class Reader(ABC):
     def __contains__(self, key: str):
         return key in self._data
 
+    def __len__(self):
+        return len(self._data)
+
     def ls(self, path: str | None = None, dirs=True, files=True) -> list[str]:
         if path is None:
             path = "/"
@@ -113,13 +116,9 @@ class Reader(ABC):
         return list(matched)
 
     def match(self, pattern: Optional[Pattern] = None) -> Iterable[str]:
-        if pattern is None:
-            return [k for k in self._data.keys()]
-        else:
-            pattern = Matcher.make(pattern)
-            for k in self._data.keys():
-                if pattern.match(k):
-                    yield k
+        for k in self._data.keys():
+            if pattern is None or pattern.match(k):
+                yield k
 
     def apply(self, op: Callable, pattern: Optional[Pattern] = None) -> None:
         """Apply a function to every 'file' in the schema, optionally if it
@@ -211,8 +210,8 @@ class Reader(ABC):
             relative_to: str  The full path from the schema root to the record
                               extending the base.
         """
-        if base in self._data:
-            return base
+        # if base in self._data:
+        #    return base
 
         base_path = Path(base)
         if base_path.suffix != ".json":
@@ -224,7 +223,7 @@ class Reader(ABC):
 
         while path != path.parent:
             test = str(path / base)
-            if test in self._data:
+            if test in self._data and test != relative_to:
                 return test
             elif extn is not None:
                 woextn = Path(*list(path.parts)[2:]) / base

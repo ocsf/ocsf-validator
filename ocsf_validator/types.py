@@ -1,6 +1,20 @@
 from dataclasses import dataclass, field
-from typing import (Any, Dict, NotRequired, Optional, Required, Sequence,
-                    TypedDict, TypeVar, Union)
+from typing import (
+    Any,
+    Dict,
+    NotRequired,
+    Optional,
+    Required,
+    Sequence,
+    TypedDict,
+    TypeVar,
+    Union,
+)
+
+ATTRIBUTES_KEY = "attributes"
+PROFILES_KEY = "profiles"
+EXTENDS_KEY = "extends"
+INCLUDE_KEY = "$include"
 
 
 class OcsfEnumMember(TypedDict):
@@ -94,8 +108,8 @@ class OcsfProfile(TypedDict):
     description: str
     meta: str
     name: str
-    annotations: Dict[str, str]
     attributes: Dict[str, OcsfAttr]
+    annotations: NotRequired[Dict[str, str]]
 
 
 OcsfObject = TypedDict(
@@ -147,3 +161,31 @@ class OcsfSchema(TypedDict):
     includes: PerExt[Dict[str, OcsfInclude]]
     profiles: PerExt[Dict[str, OcsfProfile]]
     enums: PerExt[Dict[str, OcsfEnum]]
+
+
+def is_ocsf_type(t: type):
+    return (
+        type is OcsfEnumMember
+        or type is OcsfEnum
+        or type is OcsfDeprecationInfo
+        or type is OcsfAttr
+        or type is OcsfExtension
+        or type is OcsfDictionaryTypes
+        or type is OcsfDictionary
+        or type is OcsfCategory
+        or type is OcsfCategories
+        or type is OcsfInclude
+        or type is OcsfProfile
+        or type is OcsfObject
+        or type is OcsfEvent
+    )
+
+def leaf_type(defn: type, prop: str) -> type | None:
+    if hasattr(defn, "__annotations__") and prop in defn.__annotations__:
+        t = defn.__annotations__[prop]
+        if hasattr(t, "__args__"):
+            return t.__args__[-1]
+        else:
+            return t
+    return None
+
