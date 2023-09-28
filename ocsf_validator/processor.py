@@ -257,14 +257,6 @@ class AttributesParser(MergeParser):
             if name in extn:
                 deep_merge(attrs[name], extn[name])
             if name in root:
-                """
-                import json
-
-                print("")
-                print(path, name)
-                print(root[name])
-                print(json.dumps(attrs))
-                """
                 deep_merge(attrs[name], root[name])
 
 
@@ -284,14 +276,15 @@ class IncludeParser(MergeParser):
             if k == INCLUDE_KEY:
                 return True
             elif isinstance(defn[k], dict):
-                return self._has_includes(defn[k])
+                if self._has_includes(defn[k]):
+                    return True
         return False
 
     def found_in(self, path: str) -> bool:
         return self._has_includes(self._reader[path])
 
     def _parse_includes(
-        self, defn: dict[str, Any], path: str, update: bool = True, remove: bool = False
+            self, defn: dict[str, Any], path: str, trail: list[str] = [], update: bool = True, remove: bool = False
     ) -> list[str]:
         """Find $include directives, optionally apply them, optionally
         remove the $include directive, and return a list of include targets.
@@ -310,15 +303,18 @@ class IncludeParser(MergeParser):
                     t = self._resolver.resolve_include(target, path)
                     found.append(t)
                     if t is None:
-                        collector.handle(MissingIncludeError(path, target))
+                        self._collector.handle(MissingIncludeError(path, target))
                     elif update:
-                        deep_merge(defn, self._reader[t])
+                        other = self._reader[t]
+                        for key in trail:
+                            other = other[key]
+                        deep_merge(defn, other)
 
                 if remove:
                     del defn[k]
 
             elif isinstance(defn[k], dict):
-                found += self._parse_includes(defn[k], path, update, remove)
+                found += self._parse_includes(defn[k], path, trail + [k], update, remove)
 
         return found
 
@@ -350,7 +346,6 @@ class Dependencies:
         return self._dependencies.keys()
 
     def exists(self, path: str, target: str, directive: Optional[str] = None):
-        print("exists()", path, target, directive)
         if path in self._dependencies:
             for item in self._dependencies[path]:
                 if item[0] == target:
@@ -397,7 +392,6 @@ def process_includes(
                     elif directive == INCLUDE_KEY and dependencies.exists(
                         path, dependency, PROFILES_KEY
                     ):
-                        # print(f"skipping include of profile in {path}")
                         collector.handle(RedundantProfileIncludeError(path, dependency))
                     else:
                         process(dependency)
@@ -410,22 +404,7 @@ def process_includes(
             fulfilled.add(path)
 
     for path in dependencies.keys():
-        # print(path, dependencies[path])
+        #print(path, dependencies[path])
         process(path)
 
 
-if __name__ == "__main__":
-    from ocsf_validator.reader import FileReader
-
-    reader = FileReader("../ocsf-schema")
-    collector = Collector(throw=False)
-    process_includes(reader, Collector(throw=False))
-
-    print(len(collector))
-    for err in collector:
-        print(err)
-    # includer = IncludeParser(reader, collector)
-    # path = reader.key("events", "application", "web_resource_access_activity.json")
-    # from pprint import pprint
-    # pprint(includer.extract_targets(path))
-    # includer.extract_targets(path)

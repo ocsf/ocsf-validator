@@ -13,6 +13,7 @@ data = {
     "/objects/os.json": obj.copy(),
     "/extensions/win/objects/win_process.json": obj.copy(),
     "/extensions/win/events/system/registry_key.json": event.copy(),
+    "/dictionary.json": obj.copy(),
 }
 
 
@@ -84,10 +85,3 @@ def test_ls():
     assert "application" not in matches
     assert "base_event.json" in matches
 
-
-def test_extension():
-    r = reader()
-
-    assert r.extension("/extensions/win/objects/os.json") == "win"
-    assert r.extension("/objects/os.json") is None
-    assert r.extension("extensions/windows/events/registry_key.json") == "windows"

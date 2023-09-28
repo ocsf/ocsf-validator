@@ -1,6 +1,7 @@
 import pytest
 
-from ocsf_validator.processors import apply_attributes
+from ocsf_validator.errors import *
+from ocsf_validator.processor import process_includes
 from ocsf_validator.reader import DictReader
 
 
@@ -38,7 +39,7 @@ def test_key_from_parts():
 
 def test_merge():
     r = reader()
-    apply_attributes(r)
+    process_includes(r)
 
     assert "size" in r["/objects/thing.json"]["attributes"]
     assert "color" in r["/objects/thing.json"]["attributes"]

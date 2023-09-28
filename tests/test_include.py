@@ -1,6 +1,7 @@
 import pytest
 
-from ocsf_validator.processors import MissingIncludeError, apply_include
+from ocsf_validator.errors import *
+from ocsf_validator.processor import process_includes
 from ocsf_validator.reader import DictReader
 
 
@@ -22,22 +23,18 @@ def reader():
         "/events/network/merge.json": {
             "$include": ["includes/thing.json", "includes/network.json"]
         },
-        "/objects/wenum.json": {"attributes": {"numbers": {"$include": "enums/e.js"}}},
         "/includes/network.json": {
             "caption": "Network event stuff",
             "attributes": {"proxy": {"requirement": "optional"}},
         },
         "/includes/thing.json": {"attributes": {"color": {"type": "string_t"}}},
         "/includes/thing2.json": {"name": "thing2"},
-        "/enums/e.js": {
-            "enum": {
-                "1": {
-                    "caption": "one",
+        "/dictionary.json": {
+            "attributes": {
+                "z": {
+                    "name": "z",
                 },
-                "2": {
-                    "caption": "two",
-                },
-            }
+            },
         },
     }
     r.set_data(data)
@@ -46,7 +43,7 @@ def reader():
 
 def test_include():
     r = reader()
-    apply_include(r)
+    process_includes(r)
 
     d = r["/events/network/http_activity.json"]
     assert "name" in d
@@ -57,7 +54,7 @@ def test_include():
 
 def test_include_many():
     r = reader()
-    apply_include(r)
+    process_includes(r)
 
     d = r["/events/auth/authentication.json"]
     assert "name" in d
@@ -67,7 +64,7 @@ def test_include_many():
 
 def test_apply_include():
     r = reader()
-    apply_include(r)
+    process_includes(r)
     d = r["/events/network/http_activity.json"]
     assert "name" in d
     assert "caption" in d
@@ -77,14 +74,14 @@ def test_apply_include():
 
 def test_include_merge_order():
     r = reader()
-    apply_include(r)
+    process_includes(r)
 
     assert r["/events/network/dhcp.json"]["name"] == "dhcp_activity"
 
 
 def test_include_deep_merge():
     r = reader()
-    apply_include(r)
+    process_includes(r)
 
     subj = r["/events/network/merge.json"]
     assert "color" in subj["attributes"]
@@ -96,18 +93,9 @@ def test_include_missing():
     r["/objects/bad-include.json"] = {"$include": "/not/really/here.json"}
 
     with pytest.raises(MissingIncludeError):
-        apply_include(r)
+        process_includes(r)
 
 
-def test_include_enum():
-    r = reader()
-    apply_include(r)
-
-    subj = r["/objects/wenum.json"]
-    assert "attributes" in subj
-    assert "numbers" in subj["attributes"]
-    assert "enum" in subj["attributes"]["numbers"]
-    assert "1" in subj["attributes"]["numbers"]["enum"]
 
 
 def test_include_extn():

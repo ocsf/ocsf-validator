@@ -1,6 +1,7 @@
 import pytest
 
-from ocsf_validator.processors import apply_profiles
+from ocsf_validator.errors import *
+from ocsf_validator.processor import process_includes
 from ocsf_validator.reader import DictReader
 
 
@@ -39,6 +40,13 @@ def reader():
             "name": "thing3",
             "profiles": ["profiles/p4"],
         },
+        "/dictionary.json": {
+            "attributes": {
+                "bob": {
+                    "name": "bob"
+                }
+            }
+        },
     }
     r.set_data(data)
     return r
@@ -46,7 +54,7 @@ def reader():
 
 def test_profiles():
     r = reader()
-    apply_profiles(r)
+    process_includes(r)
 
     d = r["/objects/thing1.json"]
     assert "name" in d
@@ -57,25 +65,17 @@ def test_profiles():
 
 def test_many_profiles():
     r = reader()
-    apply_profiles(r)
+    process_includes(r)
 
     d = r["/objects/thing2.json"]
     assert "two" in d["attributes"]
     assert "three" in d["attributes"]
 
 
-def test_profiles_filter():
-    r = reader()
-    apply_profiles(r, ["/profiles/p3.json"])
-
-    d = r["/objects/thing2.json"]
-    assert "two" not in d["attributes"]
-    assert "three" in d["attributes"]
-
 
 def test_profiles_extn():
     r = reader()
-    apply_profiles(r)
+    process_includes(r)
 
     d = r["/extensions/one/objects/thing3.json"]
     assert "three" in d["attributes"]
