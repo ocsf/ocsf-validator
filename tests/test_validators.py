@@ -27,9 +27,8 @@ def test_unknown_keys():
     r = DictReader()
     r.set_data(d1)
 
-    #with pytest.raises(UnknownKeyError):
-        #validate_no_unknown_keys(r)
-
+    # with pytest.raises(UnknownKeyError):
+    # validate_no_unknown_keys(r)
 
 
 def test_validate_unused_attrs():
@@ -67,6 +66,6 @@ def test_validate_unused_attrs():
         }
     )
 
-    #with pytest.raises(UnusedAttributeError) as exc:
+    # with pytest.raises(UnusedAttributeError) as exc:
     #    validate_unused_attrs(r)
-    #assert exc.value.attr == "three"
+    # assert exc.value.attr == "three"

@@ -284,7 +284,12 @@ class IncludeParser(MergeParser):
         return self._has_includes(self._reader[path])
 
     def _parse_includes(
-            self, defn: dict[str, Any], path: str, trail: list[str] = [], update: bool = True, remove: bool = False
+        self,
+        defn: dict[str, Any],
+        path: str,
+        trail: list[str] = [],
+        update: bool = True,
+        remove: bool = False,
     ) -> list[str]:
         """Find $include directives, optionally apply them, optionally
         remove the $include directive, and return a list of include targets.
@@ -314,7 +319,9 @@ class IncludeParser(MergeParser):
                     del defn[k]
 
             elif isinstance(defn[k], dict):
-                found += self._parse_includes(defn[k], path, trail + [k], update, remove)
+                found += self._parse_includes(
+                    defn[k], path, trail + [k], update, remove
+                )
 
         return found
 
@@ -404,7 +411,5 @@ def process_includes(
             fulfilled.add(path)
 
     for path in dependencies.keys():
-        #print(path, dependencies[path])
+        # print(path, dependencies[path])
         process(path)
-
-

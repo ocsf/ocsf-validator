@@ -84,4 +84,3 @@ def test_ls():
     matches = r.ls("events", dirs=False)
     assert "application" not in matches
     assert "base_event.json" in matches
-
