@@ -1,24 +1,17 @@
 import inspect
-from typing import Dict, NotRequired, Optional, Required, get_type_hints, is_typeddict
+from typing import (Dict, NotRequired, Optional, Required, get_type_hints,
+                    is_typeddict)
 
-from ocsf_validator.errors import (
-    Collector,
-    InvalidMetaSchemaError,
-    MissingRequiredKeyError,
-    UnknownKeyError,
-    UnusedAttributeError,
-    UndetectableTypeError,
-)
-from ocsf_validator.matchers import (
-    DictionaryMatcher,
-    EventMatcher,
-    ExtensionMatcher,
-    ObjectMatcher,
-)
-from ocsf_validator.reader import Reader
-from ocsf_validator.types import *
-from ocsf_validator.type_mapping import TypeMapping
+from ocsf_validator.errors import (Collector, InvalidMetaSchemaError,
+                                   MissingRequiredKeyError,
+                                   UndetectableTypeError, UnknownKeyError,
+                                   UnusedAttributeError)
+from ocsf_validator.matchers import (DictionaryMatcher, EventMatcher,
+                                     ExtensionMatcher, ObjectMatcher)
 from ocsf_validator.processor import process_includes
+from ocsf_validator.reader import Reader
+from ocsf_validator.type_mapping import TypeMapping
+from ocsf_validator.types import *
 
 
 def validate_required_keys(

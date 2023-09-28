@@ -1,15 +1,6 @@
 from dataclasses import dataclass, field
-from typing import (
-    Any,
-    Dict,
-    NotRequired,
-    Optional,
-    Required,
-    Sequence,
-    TypedDict,
-    TypeVar,
-    Union,
-)
+from typing import (Any, Dict, NotRequired, Optional, Required, Sequence,
+                    TypedDict, TypeVar, Union)
 
 ATTRIBUTES_KEY = "attributes"
 PROFILES_KEY = "profiles"
@@ -180,6 +171,7 @@ def is_ocsf_type(t: type):
         or type is OcsfEvent
     )
 
+
 def leaf_type(defn: type, prop: str) -> type | None:
     if hasattr(defn, "__annotations__") and prop in defn.__annotations__:
         t = defn.__annotations__[prop]
@@ -188,4 +180,3 @@ def leaf_type(defn: type, prop: str) -> type | None:
         else:
             return t
     return None
-

@@ -13,14 +13,12 @@ from termcolor import colored
 
 import ocsf_validator.errors as errors
 from ocsf_validator.processor import process_includes
-from ocsf_validator.type_mapping import TypeMapping
 from ocsf_validator.reader import FileReader, ReaderOptions
-from ocsf_validator.validators import (
-    validate_include_targets,
-    validate_no_unknown_keys,
-    validate_required_keys,
-    validate_unused_attrs,
-)
+from ocsf_validator.type_mapping import TypeMapping
+from ocsf_validator.validators import (validate_include_targets,
+                                       validate_no_unknown_keys,
+                                       validate_required_keys,
+                                       validate_unused_attrs)
 
 
 class Severity(IntEnum):

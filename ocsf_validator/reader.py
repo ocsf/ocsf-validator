@@ -142,14 +142,6 @@ class Reader(ABC):
 
         return accumulator
 
-    def extension(self, key: str) -> str | None:
-        """Extract the extension name from a given key/filepath."""
-        parts = list(Path(self.key(key)).parts)
-        if "extensions" in parts:
-            return parts[parts.index("extensions") + 1]
-        else:
-            return None
-
     def find_include(
         self, include: str, relative_to: Optional[str] = None
     ) -> str | None:

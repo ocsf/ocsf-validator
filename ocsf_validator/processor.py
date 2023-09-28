@@ -1,27 +1,16 @@
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from ocsf_validator.errors import (
-    Collector,
-    IncludeTypeMismatchError,
-    MissingBaseError,
-    MissingIncludeError,
-    MissingProfileError,
-    SelfInheritanceError,
-    UndetectableTypeError,
-    RedundantProfileIncludeError,
-)
+from ocsf_validator.errors import (Collector, IncludeTypeMismatchError,
+                                   MissingBaseError, MissingIncludeError,
+                                   MissingProfileError,
+                                   RedundantProfileIncludeError,
+                                   SelfInheritanceError, UndetectableTypeError)
 from ocsf_validator.reader import Reader
 from ocsf_validator.type_mapping import TypeMapping
-from ocsf_validator.types import (
-    ATTRIBUTES_KEY,
-    EXTENDS_KEY,
-    INCLUDE_KEY,
-    PROFILES_KEY,
-    OcsfDictionary,
-    OcsfEvent,
-    OcsfObject,
-)
+from ocsf_validator.types import (ATTRIBUTES_KEY, EXTENDS_KEY, INCLUDE_KEY,
+                                  PROFILES_KEY, OcsfDictionary, OcsfEvent,
+                                  OcsfObject)
 
 
 def deep_merge(d1: dict[str, Any], *others: dict[str, Any], exclude: list[str] = []):
@@ -39,6 +28,7 @@ def deep_merge(d1: dict[str, Any], *others: dict[str, Any], exclude: list[str] =
             elif k not in d1:
                 d1[k] = d[k]
 
+
 def exclude_props(t1: type, t2: type):
     if not hasattr(t1, "__annotations__") or not hasattr(t2, "__annotations__"):
         raise Exception("Unexpected types in comparison")
@@ -52,7 +42,9 @@ class DependencyResolver:
         self._reader = reader
         self._types = types
 
-    def resolve_include(self, target: str, relative_to: Optional[str] = None) -> str | None:
+    def resolve_include(
+        self, target: str, relative_to: Optional[str] = None
+    ) -> str | None:
         """Find a file from an OCSF $include directive.
 
         For a given file f, search:
@@ -146,8 +138,15 @@ class DependencyResolver:
 
         return None
 
+
 class MergeParser:
-    def __init__(self, reader: Reader, resolver: DependencyResolver, collector: Collector, types: TypeMapping):
+    def __init__(
+        self,
+        reader: Reader,
+        resolver: DependencyResolver,
+        collector: Collector,
+        types: TypeMapping,
+    ):
         self._reader = reader
         self._resolver = resolver
         self._collector = collector
@@ -177,7 +176,7 @@ class ExtendsParser(MergeParser):
 
     def extract_targets(self, path: str) -> list[str]:
         target = self._reader[path][EXTENDS_KEY]
-        base = self._reader.find_base(target, path)
+        base = self._resolver.resolve_base(target, path)
         if base is None:
             self._collector.handle(MissingBaseError(path, target))
             return []
@@ -188,7 +187,7 @@ class ExtendsParser(MergeParser):
                         path, base, "OcsfObject | OcsfEvent", "extends"
                     )
                 )
-            return [self._reader.find_base(target, path)]
+            return [self._resolver.resolve_base(target, path)]
 
 
 class ProfilesParser(MergeParser):
@@ -208,7 +207,7 @@ class ProfilesParser(MergeParser):
             profiles = [profiles]
 
         for profile in profiles:
-            target = self._reader.find_profile(profile, path)
+            target = self._resolver.resolve_profile(profile, path)
             if target is None:
                 self._collector.handle(MissingProfileError(path, profile))
             else:
@@ -258,11 +257,14 @@ class AttributesParser(MergeParser):
             if name in extn:
                 deep_merge(attrs[name], extn[name])
             if name in root:
+                """
                 import json
+
                 print("")
                 print(path, name)
                 print(root[name])
                 print(json.dumps(attrs))
+                """
                 deep_merge(attrs[name], root[name])
 
 
@@ -392,11 +394,10 @@ def process_includes(
                 for dependency, directive in dependencies[path]:
                     if dependency == path:
                         collector.handle(SelfInheritanceError(path, target))
-                    elif (
-                        directive == INCLUDE_KEY
-                        and dependencies.exists(path, dependency, PROFILES_KEY)
+                    elif directive == INCLUDE_KEY and dependencies.exists(
+                        path, dependency, PROFILES_KEY
                     ):
-                        #print(f"skipping include of profile in {path}")
+                        # print(f"skipping include of profile in {path}")
                         collector.handle(RedundantProfileIncludeError(path, dependency))
                     else:
                         process(dependency)
@@ -409,7 +410,7 @@ def process_includes(
             fulfilled.add(path)
 
     for path in dependencies.keys():
-        #print(path, dependencies[path])
+        # print(path, dependencies[path])
         process(path)
 
 
@@ -428,4 +429,3 @@ if __name__ == "__main__":
     # from pprint import pprint
     # pprint(includer.extract_targets(path))
     # includer.extract_targets(path)
-
