@@ -22,10 +22,10 @@ from ocsf_validator.validators import (validate_include_targets,
 
 
 class Severity(IntEnum):
-    IGNORE = 0
+    INFO = 0
     WARN = 1
     ERROR = 2
-    CRASH = 3
+    FATAL = 3
 
 
 @dataclass
@@ -36,12 +36,18 @@ class ValidatorOptions:
     """The base path of the schema."""
 
     extensions: bool = True
-
     """Include the contents of extensions."""
-    invalid_path: int = Severity.CRASH
+
+    strict: bool = False
+    """When True, exit with a non-zero exit code when warnings are encountered."""
+
+    show_info: bool = False
+    """Show informational messages."""
+
+    invalid_path: int = Severity.FATAL
     """The OCSF Schema path could not be found or is horribly wrong."""
 
-    invalid_metaschema: int = Severity.CRASH
+    invalid_metaschema: int = Severity.FATAL
     """The metaschema defined in this validator appears to be invalid."""
 
     missing_include: int = Severity.ERROR
@@ -53,10 +59,13 @@ class ValidatorOptions:
     missing_inheritance: int = Severity.ERROR
     """An `extends` inheritance target is missing."""
 
+    imprecise_inheritance: int = Severity.WARN
+    """An `extends` inheritance target is resolvable but imprecise and possibly ambiguous."""
+
     missing_key: int = Severity.ERROR
     """A required key is missing."""
 
-    unknown_key: int = Severity.WARN
+    unknown_key: int = Severity.ERROR
     """An unrecognized key was found."""
 
     unused_attribute: int = Severity.WARN
@@ -65,7 +74,7 @@ class ValidatorOptions:
     self_inheritance: int = Severity.WARN
     """Attempting to `extend` the current record."""
 
-    redundant_profile_include: int = Severity.IGNORE
+    redundant_profile_include: int = Severity.INFO
     """Redundant profiles and $include target."""
 
     undetectable_type: int = Severity.WARN
@@ -92,6 +101,8 @@ class ValidatorOptions:
                 return self.invalid_metaschema
             case errors.InvalidBasePathError:
                 return self.invalid_path
+            case errors.ImpreciseBaseError:
+                return self.imprecise_inheritance
             case errors.SelfInheritanceError:
                 return self.self_inheritance
             case errors.RedundantProfileIncludeError:
@@ -101,7 +112,7 @@ class ValidatorOptions:
             case errors.IncludeTypeMismatchError:
                 return self.include_type_mismatch
             case _:
-                return Severity.IGNORE
+                return Severity.INFO
 
 
 class ValidationRunner:
@@ -113,6 +124,40 @@ class ValidationRunner:
 
         self.options = options
 
+    def txt_fail(self, text: str):
+        return colored(text, "red")
+
+    def txt_warn(self, text: str):
+        return colored(text, "yellow")
+
+    def txt_crash(self, text: str):
+        return colored(text, "black", "on_red")
+
+    def txt_info(self, text: str):
+        return colored(text, "blue")
+
+    def txt_pass(self, text: str):
+        return colored(text, "green")
+
+    def txt_highlight(self, text: str):
+        return colored(text, "light_grey", "on_cyan")
+
+    def txt_emphasize(self, text: str):
+        return colored(text, "white")
+
+    def txt_label(self, severity: int):
+        match severity:
+            case Severity.INFO:
+                return self.txt_info("INFO")
+            case Severity.WARN:
+                return self.txt_warn("WARNING")
+            case Severity.ERROR:
+                return self.txt_fail("ERROR")
+            case Severity.FATAL:
+                return self.txt_crash("FATAL")
+            case _:
+                return self.txt_emphasize("???")
+
     def validate(self):
         exit_code = 0
         messages: dict[str, dict[int, set[str]]] = {}
@@ -122,34 +167,33 @@ class ValidationRunner:
             message: str = ""
             code()
 
-            if len(collector) > 0:
-                print(colored("FAILED", "red"), end="")
-                for err in collector:
-                    severity = self.options.severity(err)
-                    if severity > Severity.IGNORE:
-                        if label not in messages:
-                            messages[label] = {}
-                        if severity not in messages[label]:
-                            messages[label][severity] = set()
-                        messages[label][severity].add(str(err))
+            if label not in messages:
+                messages[label] = {}
+                print("")
+                print(self.txt_info("TESTING:"), self.txt_emphasize(label))
 
-                        match severity:
-                            case Severity.WARN:
-                                ...
-                            case Severity.ERROR:
-                                exit_code = 1
-                            case Severity.CRASH:
-                                exit(10)
+            for err in collector:
+                severity = self.options.severity(err)
 
-                collector.flush()
+                if severity not in messages[label]:
+                    messages[label][severity] = set()
 
-            else:
-                print(colored("SUCCESS", "green"), end="")
+                messages[label][severity].add(str(err))
+                if severity > Severity.INFO or self.options.show_info:
+                    print("  ", self.txt_label(severity), err)
 
-            print(" ", colored(label, "white"))
+                if severity == Severity.FATAL:
+                    exit(2)
+
+            if len(collector) == 0:
+                print("  ", self.txt_pass("PASS"), "No problems identified.")
+            collector.flush()
 
         try:
-            print(f"Validating OCSF schema at {self.options.base_path}")
+            print(self.txt_emphasize("===[ OCSF Schema Validator ]==="))
+            print(
+                "Validating OCSF Schema at", self.txt_highlight(self.options.base_path)
+            )
 
             # Setup the reader
             opts = ReaderOptions(
@@ -160,14 +204,14 @@ class ValidationRunner:
                 reader = FileReader(opts)
             except errors.ValidationError as err:
                 collector.handle(err)
-            test("Schema can be loaded", lambda: None)
+            test("Schema definitions can be loaded", lambda: None)
 
             types = TypeMapping(reader, collector)
             test("Schema types can be inferred", lambda: None)
 
             # Validate dependencies
             test(
-                "Valid include targets",
+                "Dependency targets are resolvable",
                 lambda: validate_include_targets(
                     reader, collector=collector, types=types
                 ),
@@ -187,47 +231,48 @@ class ValidationRunner:
             )
 
             test(
-                "No unrecognized keys",
+                "All keys are recognized",
                 lambda: validate_no_unknown_keys(
                     reader, collector=collector, types=types
                 ),
             )
 
-            """
             test(
-                "No unused attributes",
+                "All attributes in the dictionary are used",
                 lambda: validate_unused_attrs(reader, collector=collector, types=types),
             )
-            """
 
         except Exception as err:
             print("Encountered an unexpected exception:")
             traceback.print_exception(err)
 
         finally:
-            labels = {
-                Severity.WARN: "WARNING",
-                Severity.ERROR: "ERROR",
-                Severity.CRASH: "HALT",
-            }
-            colors = {
-                Severity.WARN: "yellow",
-                Severity.ERROR: "red",
-                Severity.CRASH: "magenta",
-            }
+            print("")
+            print(self.txt_emphasize("SUMMARY"))
+
+            failure_threshold = (
+                Severity.ERROR if not self.options.strict else Severity.WARN
+            )
 
             for k in messages:
+                found = False
                 if len(messages[k].items()) > 0:
-                    print("")
-                    print(colored("Results for test:", "white"), k)
+                    for sev in [
+                        Severity.FATAL,
+                        Severity.ERROR,
+                        Severity.WARN,
+                        Severity.INFO,
+                    ]:
+                        if sev in messages[k] and sev >= failure_threshold:
+                            found = True
+                            print("  ", self.txt_fail("FAILED"), k)
+                            exit_code = 1
 
-                    for s in labels:
-                        if s in messages[k]:
-                            for error in messages[k][s]:
-                                print(" ", colored(labels[s], colors[s]), error)
+                if not found:
+                    print("  ", self.txt_pass("PASSED"), k)
 
-        print("")
-        exit(exit_code)
+            print("")
+            exit(exit_code)
 
 
 if __name__ == "__main__":

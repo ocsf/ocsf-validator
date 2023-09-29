@@ -1,11 +1,7 @@
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from ocsf_validator.errors import (Collector, IncludeTypeMismatchError,
-                                   MissingBaseError, MissingIncludeError,
-                                   MissingProfileError,
-                                   RedundantProfileIncludeError,
-                                   SelfInheritanceError, UndetectableTypeError)
+from ocsf_validator.errors import *
 from ocsf_validator.reader import Reader
 from ocsf_validator.type_mapping import TypeMapping
 from ocsf_validator.types import (ATTRIBUTES_KEY, EXTENDS_KEY, INCLUDE_KEY,
@@ -139,6 +135,37 @@ class DependencyResolver:
 
         return None
 
+    def resolve_imprecise_base(self, base: str, relative_to: str) -> str | None:
+        """Resolve an imprecise `extends` directive.
+
+        Some `extends` directives point to files that are adjacent in the tree,
+        e.g. ../blah/base.json. These seem imprecise to me without a strict
+        lack of naming collisions, so I'm not making this the default behavior
+        of `resolve_base()` in order to generate warnings.
+        """
+        base_path = Path(base)
+        if base_path.suffix != ".json":
+            base += ".json"
+
+        # Search the current directory and each parent directory
+        path = Path(relative_to)
+        extn = self._types.extension(relative_to)
+
+        while path != path.parent:
+            for search in self._reader.ls(str(path)):
+                test = str(search / base)
+                if test in self._reader and test != relative_to:
+                    return test
+                elif extn is not None:
+                    woextn = Path(*list(search.parts)[2:]) / base
+                    test = str(woextn)
+                    if test in self._reader:
+                        return test
+
+            path = path.parent
+
+        return None
+
 
 class MergeParser:
     def __init__(
@@ -179,8 +206,11 @@ class ExtendsParser(MergeParser):
         target = self._reader[path][EXTENDS_KEY]
         base = self._resolver.resolve_base(target, path)
         if base is None:
-            self._collector.handle(MissingBaseError(path, target))
-            return []
+            base = self._resolver.resolve_imprecise_base(target, path)
+            if base is None:
+                self._collector.handle(ImpreciseBaseError(path, target))
+            else:
+                self._collector.handle(MissingBaseError(path, target))
         else:
             if self._types[base] not in [OcsfEvent, OcsfObject]:
                 self._collector.handle(
@@ -189,6 +219,8 @@ class ExtendsParser(MergeParser):
                     )
                 )
             return [self._resolver.resolve_base(target, path)]
+
+        return []
 
 
 class ProfilesParser(MergeParser):

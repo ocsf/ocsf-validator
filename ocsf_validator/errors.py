@@ -4,13 +4,26 @@ TCollector = TypeVar("TCollector", bound="Collector")
 
 
 class Collector:
+    """An error collector used by schema operations so that encountered errors
+    can be saved for later and displayed as test output.
+
+    The default behavior is to `raise` all exceptions, so you shouldn't
+    notice the collector until `throw` is `False`.
+    """
+
     default: TCollector
+    """Simple singleton used whenever an Optional[Collector] parameter is None."""
 
     def __init__(self, throw: bool = True):
         self._exceptions: list[Exception] = []
         self._throw = throw
 
     def handle(self, err: Exception):
+        """Handle an exception.
+
+        By default, exceptions are stored and raised. But if `throw` is `False`,
+        exceptions will only be stored for later."""
+
         self._exceptions.append(err)
         if self._throw:
             raise err
@@ -126,6 +139,17 @@ class MissingBaseError(DependencyError):
         self.file = file
         self.include = include
         super().__init__(file, include, f"Missing base record '{include}' in {file}")
+
+
+class ImpreciseBaseError(DependencyError):
+    def __init__(self, file: str, include: str):
+        self.file = file
+        self.include = include
+        super().__init__(
+            file,
+            include,
+            f"Imprecise and possibly ambiguous base record definition '{include}' in {file}",
+        )
 
 
 class MissingProfileError(DependencyError):

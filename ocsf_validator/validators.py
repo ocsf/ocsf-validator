@@ -143,13 +143,11 @@ def validate_unused_attrs(
         types = TypeMapping(reader)
 
     def make_validator(defn: type):
-        attrs = find_attrs(defn)
-
         def validate(reader: Reader, key: str, accum: set[str]):
             record = reader[key]
-            if attrs is not None and attrs in record:
+            if ATTRIBUTES_KEY in record:
                 return accum | set(
-                    [k for k in record[attrs]]
+                    [k for k in record[ATTRIBUTES_KEY]]
                 )  # should it be defn[attrs][k]['name'] ?
             else:
                 return accum
@@ -160,8 +158,7 @@ def validate_unused_attrs(
     attrs |= reader.map(make_validator(OcsfEvent), EventMatcher(), set())
 
     d = reader.find("dictionary.json")
-    attr_key = find_attrs(OcsfDictionary)
 
-    for k in d[attr_key]:
+    for k in d[ATTRIBUTES_KEY]:
         if k not in attrs:
             collector.handle(UnusedAttributeError(k))
