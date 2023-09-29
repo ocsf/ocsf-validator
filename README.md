@@ -72,6 +72,7 @@ There is still plenty to be done!
 
 ### General
 
+ - [ ] Add CLI arguments for everything in ValidatorOptions
  - [ ] Add more validators.
  - [ ] Are things named consistently across (and within) modules?
  - [ ] Inline documentation could be better.
