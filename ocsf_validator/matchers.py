@@ -50,6 +50,14 @@ class DictionaryMatcher(RegexMatcher, TypeMatcher):
         return OcsfDictionary
 
 
+class VersionMatcher(RegexMatcher, TypeMatcher):
+    def __init__(self):
+        self._pattern = re.compile(r".*version.json")
+
+    def get_type(self):
+        return OcsfVersion
+
+
 class ObjectMatcher(RegexMatcher, TypeMatcher):
     def __init__(self):
         self._pattern = re.compile(r".*objects/.*json")

@@ -8,6 +8,10 @@ EXTENDS_KEY = "extends"
 INCLUDE_KEY = "$include"
 
 
+class OcsfVersion(TypedDict):
+    version: str
+
+
 class OcsfEnumMember(TypedDict):
     caption: str
     description: NotRequired[str]
@@ -27,7 +31,8 @@ OcsfAttr = TypedDict(
     "OcsfAttr",
     {
         "$include": NotRequired[str],
-        "caption": NotRequired[str],
+        # "caption": NotRequired[str],
+        "caption": str,
         "default": NotRequired[Any],
         "description": NotRequired[str],
         "enum": NotRequired[Dict[str, OcsfEnumMember]],
@@ -156,19 +161,19 @@ class OcsfSchema(TypedDict):
 
 def is_ocsf_type(t: type):
     return (
-        type is OcsfEnumMember
-        or type is OcsfEnum
-        or type is OcsfDeprecationInfo
-        or type is OcsfAttr
-        or type is OcsfExtension
-        or type is OcsfDictionaryTypes
-        or type is OcsfDictionary
-        or type is OcsfCategory
-        or type is OcsfCategories
-        or type is OcsfInclude
-        or type is OcsfProfile
-        or type is OcsfObject
-        or type is OcsfEvent
+        t is OcsfEnumMember
+        or t is OcsfEnum
+        or t is OcsfDeprecationInfo
+        or t is OcsfAttr
+        or t is OcsfExtension
+        or t is OcsfDictionaryTypes
+        or t is OcsfDictionary
+        or t is OcsfCategory
+        or t is OcsfCategories
+        or t is OcsfInclude
+        or t is OcsfProfile
+        or t is OcsfObject
+        or t is OcsfEvent
     )
 
 

@@ -24,19 +24,22 @@ def validate_required_keys(
     if types is None:
         types = TypeMapping(reader)
 
-    def compare_keys(data: Dict[str, Any], defn: type, file: str):
+    def compare_keys(
+        data: Dict[str, Any], defn: type, file: str, trail: list[str] = []
+    ):
         if hasattr(defn, "__required_keys__"):
             for k in defn.__required_keys__:
                 t = leaf_type(defn, k)
                 if k not in data:
-                    collector.handle(MissingRequiredKeyError(k, file))
+                    collector.handle(MissingRequiredeyError(k, file, defn, trail))
                 elif t is not None and is_ocsf_type(t):
                     if isinstance(data[k], dict):
                         # dict[str, Ocsf____]
-                        for k2, val in data[k]:
-                            compare_keys(data[k][k2], t, file)
+                        for k2, val in data[k].items():
+                            if k2 != INCLUDE_KEY:
+                                compare_keys(data[k][k2], t, file, trail + [k, k2])
                     else:
-                        compare_keys(data[k], t, file)
+                        compare_keys(data[k], t, file, trail + [k])
 
         else:
             collector.handle(
@@ -54,18 +57,6 @@ def validate_required_keys(
             if not hasattr(defn, "__annotations__"):
                 collector.handle(InvalidMetaSchemaError(f"{defn} is not a TypedDict"))
             compare_keys(record, defn, file)
-            """
-            for k, a in defn.__annotations__.items():
-                if hasattr(a, "__args__"):
-                    args = a.__args__
-                    for i in range(0, len(args)):
-                        arg = args[i]
-                        if arg == dict or arg == Dict:
-                            print("found dict")
-                        if hasattr(arg, "__args__"):
-                            print("nested", arg.__args__)
-                        print("arg", arg)
-                        """
 
     reader.apply(validate)
 
@@ -80,19 +71,59 @@ def validate_no_unknown_keys(
     if types is None:
         types = TypeMapping(reader)
 
-    def _validator(defn: type):
-        def validate(reader: Reader, file: str):
-            data = reader[file]
+    def compare_keys(
+        data: Dict[str, Any], defn: type, file: str, trail: list[str] = []
+    ):
+        if hasattr(defn, "__annotations__") and isinstance(data, dict):
             for k in data.keys():
-                if k not in defn.__annotations__:
-                    collector.handle(UnknownKeyError(k, file))
+                t = leaf_type(defn, k)
+                if t is None:
+                    collector.handle(UnknownKeyError(k, file, defn, trail))
+                elif is_ocsf_type(t):
+                    if hasattr(defn.__annotations__[k], "__args__"):
+                        args = defn.__annotations__[k].__args__
+                        if len(args) >= 2:
+                            if args[-2] == str:
+                                for k2, val in data[k].items():
+                                    if k2 != INCLUDE_KEY:
+                                        compare_keys(
+                                            data[k][k2], t, file, trail + [k, k2]
+                                        )
+                            else:
+                                ...  # what would this be?
+                        else:
+                            compare_keys(data[k], args[-1], file, trail + [k])
+                    else:
+                        compare_keys(data[k], t, file, trail + [k])
 
-        return validate
+                    """if isinstance(data[k], dict):
+                        # dict[str, Ocsf____]
+                        for k2, val in data[k].items():
+                            if k2 != INCLUDE_KEY:
+                                compare_keys(data[k][k2], t, file, trail + [k, k2])
+                    else:
+                        print("leaf")
+                        compare_keys(data[k], t, file, trail + [k])
+                        """
 
-    reader.apply(_validator(OcsfObject), ObjectMatcher())
-    reader.apply(_validator(OcsfEvent), EventMatcher())
-    reader.apply(_validator(OcsfDictionary), DictionaryMatcher())
-    reader.apply(_validator(OcsfExtension), ExtensionMatcher())
+        else:
+            collector.handle(
+                InvalidMetaSchemaError(
+                    f"Unexpected definition {defn} used when processing {file}"
+                )
+            )
+
+    def validate(reader: Reader, file: str):
+        record = reader[file]
+        if file not in types:
+            collector.handle(UndetectableTypeError(file))
+        else:
+            defn = types[file]
+            if not hasattr(defn, "__annotations__"):
+                collector.handle(InvalidMetaSchemaError(f"{defn} is not a TypedDict"))
+            compare_keys(record, defn, file)
+
+    reader.apply(validate)
 
 
 def validate_include_targets(

@@ -29,7 +29,15 @@ class Severity(IntEnum):
 
 
 @dataclass
-class SeverityOptions:
+class ValidatorOptions:
+    """Configure validator behavior."""
+
+    base_path: str = "."
+    """The base path of the schema."""
+
+    extensions: bool = True
+
+    """Include the contents of extensions."""
     invalid_path: int = Severity.CRASH
     """The OCSF Schema path could not be found or is horribly wrong."""
 
@@ -94,17 +102,6 @@ class SeverityOptions:
                 return self.include_type_mismatch
             case _:
                 return Severity.IGNORE
-
-
-@dataclass
-class ValidatorOptions(SeverityOptions):
-    """Configure validator behavior."""
-
-    base_path: str = "."
-    """The base path of the schema."""
-
-    extensions: bool = True
-    """Include the contents of extensions."""
 
 
 class ValidationRunner:
@@ -189,12 +186,14 @@ class ValidationRunner:
                 ),
             )
 
-            """
             test(
                 "No unrecognized keys",
-                lambda: validate_no_unknown_keys(reader, collector=collector, types=types),
+                lambda: validate_no_unknown_keys(
+                    reader, collector=collector, types=types
+                ),
             )
 
+            """
             test(
                 "No unused attributes",
                 lambda: validate_unused_attrs(reader, collector=collector, types=types),

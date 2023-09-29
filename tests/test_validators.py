@@ -23,6 +23,26 @@ def test_required_keys():
         validate_required_keys(r)
 
 
+def test_deep_required_keys():
+    s = {
+        "/events/event.json": {
+            "caption": "Event",
+            "name": "event",
+            "attributes": {
+                "one": {
+                    "name": "one",
+                },
+            },
+        },
+    }
+    r = DictReader()
+    r.set_data(s)
+
+    with pytest.raises(MissingRequiredKeyError) as exc:
+        validate_required_keys(r)
+    assert exc.value.key is "caption"
+
+
 def test_unknown_keys():
     r = DictReader()
     r.set_data(d1)

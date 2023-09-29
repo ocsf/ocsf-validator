@@ -6,8 +6,9 @@ from ocsf_validator.reader import Reader
 from ocsf_validator.types import *
 
 MATCHERS = [
-    CategoriesMatcher(),
+    VersionMatcher(),
     DictionaryMatcher(),
+    CategoriesMatcher(),
     IncludeMatcher(),
     CategoriesMatcher(),
     ProfileMatcher(),
@@ -54,15 +55,3 @@ class TypeMapping:
             return parts[parts.index("extensions") + 1]
         else:
             return None
-
-
-if __name__ == "__main__":
-    from ocsf_validator.reader import FileReader
-
-    reader = FileReader("../ocsf-schema")
-    collector = Collector(throw=False)
-    tm = TypeMapping(reader, collector)
-    tm.update()
-
-    for err in collector:
-        print(err)

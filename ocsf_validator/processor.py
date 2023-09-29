@@ -22,11 +22,12 @@ def deep_merge(d1: dict[str, Any], *others: dict[str, Any], exclude: list[str] =
     dictionary. And thus this recursive merge."""
     for d in others:
         for k, v in d.items():
-            if k in d1 and k not in exclude and isinstance(v, dict):
-                deep_merge(d1[k], d[k])
+            if k not in exclude:
+                if k in d1 and isinstance(v, dict):
+                    deep_merge(d1[k], d[k])
 
-            elif k not in d1:
-                d1[k] = d[k]
+                elif k not in d1:
+                    d1[k] = d[k]
 
 
 def exclude_props(t1: type, t2: type):

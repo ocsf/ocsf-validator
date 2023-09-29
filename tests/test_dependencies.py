@@ -164,6 +164,7 @@ def test_profiles_many():
 
 def test_profiles():
     prof = event("profile1", ["thing"])
+    prof["meta"] = "stuff"
     httpa = event("http_activity")
     httpa["profiles"] = "profile1"
     prof2 = event("profile1", ["thing2"])
@@ -185,6 +186,7 @@ def test_profiles():
     assert (
         "thing" in r["/extensions/one/events/network/http_activity.json"]["attributes"]
     )
+    assert "meta" not in r["/extensions/one/events/network/http_activity.json"]
     assert (
         "thing2"
         not in r["/extensions/one/events/network/http_activity.json"]["attributes"]
@@ -195,6 +197,8 @@ def test_profiles():
 
 def test_attrs_from_dictionary():
     o1 = obj("o1", ["thing"])
+    o1["attributes"]["thing"]["name"] = "thing1"
+
     d = {
         "attributes": {
             "thing": {"name": "thing", "caption": "Thing", "requirement": "optional"},
@@ -211,5 +215,6 @@ def test_attrs_from_dictionary():
 
     process_includes(r)
     assert "thing" in r["/objects/o1.json"]["attributes"]
+    assert r["/objects/o1.json"]["attributes"]["thing"]["name"] is "thing1"
     assert "thing2" not in r["/objects/o1.json"]["attributes"]
     assert "requirement" in r["/objects/o1.json"]["attributes"]["thing"]

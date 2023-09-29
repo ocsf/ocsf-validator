@@ -43,7 +43,7 @@ If you're adding a validator, do the following:
 
 ### General
 
- - [ ] Include all paths and types in validation
+ - [X] Include all paths and types in validation
  - [ ] Are things named consistently across (and within) modules?
  - [ ] Inline documentation could be better.
  - [ ] This README could be better.
@@ -57,9 +57,9 @@ If you're adding a validator, do the following:
  - [X] Canned patterns for event, object, etc.
  - [X] Type detection of records based on key.
  - [X] Cyclical dependencies...
- - [ ] Exclude keys that match the included record type (e.g. OcsfProfile) but not the destination record type for flavors of include.
- - [ ] Refactor find_include, etc., from Reader to MergeParsers
- - [ ] Refactor reader and processor unit tests
+ - [X] Exclude keys that match the included record type (e.g. OcsfProfile) but not the destination record type for flavors of include.
+ - [X] Refactor find_include, etc., from Reader to MergeParsers
+ - [X] Refactor reader and processor unit tests
 
 ### Runner
 
@@ -73,16 +73,20 @@ If you're adding a validator, do the following:
  - [ ] Action for this repository to publish to PyPi
  - [ ] Action for the OCSF Schema repository to run the validation runner on PRs.
 
+### Testing
+
+ - [ ] Unit tests for TypeMapping
+
 ### Validators
 
  - [X] Required keys (including nested in attrs)
- - [X] No unknown keys
+ - [ ] No unknown keys
     - [ ] Fix "description:" key
  - [X] Include targets exist
  - [X] Profile targets exist
  - [X] Inheritance targets (`extends`) exist
  - [ ] Categories match directories in events
- - [X] Warn of unused dictionary items
+ - [ ] Warn of unused dictionary items
  - [ ] Warn of unused enums
  - [ ] Warn of unused profiles
  - [ ] Warn of unused includes

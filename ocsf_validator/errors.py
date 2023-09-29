@@ -54,17 +54,57 @@ class UnusedAttributeError(ValidationError):
 
 
 class MissingRequiredKeyError(ValidationError):
-    def __init__(self, key: str, file: str):
+    def __init__(
+        self,
+        key: str,
+        file: str,
+        cls: Optional[type] = None,
+        trail: Optional[list[str]] = None,
+    ):
         self.key = key
         self.file = file
-        super().__init__(f"Missing required key '{key}' in {file}")
+        self.cls = cls
+        self.trail = trail
+
+        if trail is None:
+            trail = ""
+        else:
+            trail = ".".join(trail)
+
+        if cls is None:
+            cls_str = ""
+        else:
+            cls_str = cls.__name__ + "."
+
+        super().__init__(
+            f"Missing required key `{cls_str}{key}` at `{trail}` in {file}"
+        )
 
 
 class UnknownKeyError(ValidationError):
-    def __init__(self, key: str, file: str):
+    def __init__(
+        self,
+        key: str,
+        file: str,
+        cls: Optional[type] = None,
+        trail: Optional[list[str]] = None,
+    ):
         self.key = key
         self.file = file
-        super().__init__(f"Unrecognized key '{key}' in {file}")
+        self.cls = cls
+        self.trail = trail
+
+        if trail is None:
+            trail = ""
+        else:
+            trail = ".".join(trail)
+
+        if cls is None:
+            cls_str = ""
+        else:
+            cls_str = cls.__name__
+
+        super().__init__(f"Unrecognized key `{key}` of `{cls}` at `{trail}` in {file}")
 
 
 class DependencyError(ValidationError):
