@@ -28,7 +28,7 @@ def validate_required_keys(
         data: Dict[str, Any], defn: type, file: str, trail: list[str] = []
     ):
         if hasattr(defn, "__required_keys__"):
-            for k in defn.__required_keys__:
+            for k in defn.__required_keys__:  # type: ignore
                 t = leaf_type(defn, k)
                 if k not in data:
                     collector.handle(MissingRequiredKeyError(k, file, defn, trail))
@@ -159,6 +159,7 @@ def validate_unused_attrs(
 
     d = reader.find("dictionary.json")
 
-    for k in d[ATTRIBUTES_KEY]:
-        if k not in attrs:
-            collector.handle(UnusedAttributeError(k))
+    if d is not None:
+        for k in d[ATTRIBUTES_KEY]:
+            if k not in attrs:
+                collector.handle(UnusedAttributeError(k))

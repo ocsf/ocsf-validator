@@ -9,21 +9,28 @@ from ocsf_validator.types import (ATTRIBUTES_KEY, EXTENDS_KEY, INCLUDE_KEY,
                                   OcsfObject)
 
 
-def deep_merge(d1: dict[str, Any], *others: dict[str, Any], exclude: list[str] = []):
+def deep_merge(
+    subj: dict[str, Any], other: dict[str, Any], exclude: Optional[set[str]] = None
+):
     """Recursive merging of dictionary keys.
 
-    `d1 | d2 [| dn]` is more readable, but it doesn't merge recursively. If
-    d1, d2, and d3 each have an "attributes" key with a dictionary value,
+    `subj | other` is more readable, but it doesn't merge recursively. If
+    subj and other each have an "attributes" key with a dictionary value,
     only the first "attributes" dictionary will be present in the resulting
     dictionary. And thus this recursive merge."""
-    for d in others:
-        for k, v in d.items():
-            if k not in exclude:
-                if k in d1 and isinstance(v, dict):
-                    deep_merge(d1[k], d[k])
 
-                elif k not in d1:
-                    d1[k] = d[k]
+    if exclude is None:
+        skip = set()
+    else:
+        skip = exclude
+
+    for k, v in other.items():
+        if k not in skip:
+            if k in subj and isinstance(v, dict):
+                deep_merge(subj[k], other[k])
+
+            elif k not in subj:
+                subj[k] = other[k]
 
 
 def exclude_props(t1: type, t2: type):
@@ -153,11 +160,12 @@ class DependencyResolver:
 
         while path != path.parent:
             for search in self._reader.ls(str(path)):
-                test = str(search / base)
+                search_path = path / search
+                test = str(search_path / base)
                 if test in self._reader and test != relative_to:
                     return test
                 elif extn is not None:
-                    woextn = Path(*list(search.parts)[2:]) / base
+                    woextn = Path(*list(search_path.parts)[2:]) / base
                     test = str(woextn)
                     if test in self._reader:
                         return test
@@ -197,7 +205,10 @@ class MergeParser:
 
 class ExtendsParser(MergeParser):
     def applies_to(self, t: type) -> bool:
-        return EXTENDS_KEY in t.__required_keys__ or EXTENDS_KEY in t.__optional_keys__
+        if hasattr(t, "__required_keys__") or hasattr(t, "__optional_keys"):
+            return EXTENDS_KEY in t.__required_keys__ or EXTENDS_KEY in t.__optional_keys__  # type: ignore
+        else:
+            return False
 
     def found_in(self, path: str) -> bool:
         return EXTENDS_KEY in self._reader[path]
@@ -214,20 +225,23 @@ class ExtendsParser(MergeParser):
         else:
             if self._types[base] not in [OcsfEvent, OcsfObject]:
                 self._collector.handle(
-                    InvalidTypeMismatchError(
+                    IncludeTypeMismatchError(
                         path, base, "OcsfObject | OcsfEvent", "extends"
                     )
                 )
-            return [self._resolver.resolve_base(target, path)]
+            base = self._resolver.resolve_base(target, path)
+            return [base if base is not None else ""]
 
         return []
 
 
 class ProfilesParser(MergeParser):
     def applies_to(self, t: type) -> bool:
-        return (
-            PROFILES_KEY in t.__required_keys__ or PROFILES_KEY in t.__optional_keys__
-        )
+        if hasattr(t, "__required_keys__") or hasattr(t, "__optional_keys"):
+            return PROFILES_KEY in t.__required_keys__ or PROFILES_KEY in t.__optional_keys__  # type: ignore
+
+        else:
+            return False
 
     def found_in(self, path: str) -> bool:
         return PROFILES_KEY in self._reader[path]
@@ -251,10 +265,10 @@ class ProfilesParser(MergeParser):
 
 class AttributesParser(MergeParser):
     def applies_to(self, t: type) -> bool:
-        return (
-            ATTRIBUTES_KEY in t.__required_keys__
-            or ATTRIBUTES_KEY in t.__optional_keys__
-        )
+        if hasattr(t, "__required_keys__") or hasattr(t, "__optional_keys"):
+            return ATTRIBUTES_KEY in t.__required_keys__ or ATTRIBUTES_KEY in t.__optional_keys__  # type: ignore
+        else:
+            return False
 
     def found_in(self, path: str) -> bool:
         return ATTRIBUTES_KEY in self._reader[path]
@@ -295,12 +309,7 @@ class AttributesParser(MergeParser):
 
 class IncludeParser(MergeParser):
     def applies_to(self, t: type) -> bool:
-        return INCLUDE_KEY in t.__required_keys__ or INCLUDE_KEY in t.__optional_keys__
-
-    def applies_to(self, t: type) -> bool:
-        return "__required_keys__" in t.__dict__ and (
-            INCLUDE_KEY in t.__optional_keys__ or INCLUDE_KEY in t.__required_keys__
-        )
+        return ("__required_keys__" in t.__dict__ and INCLUDE_KEY in t.__required_keys__) or ("__optional_keys__" in t.__dict__ and INCLUDE_KEY in t.__optional_keys__)  # type: ignore
 
     def _has_includes(self, defn: dict[str, Any]) -> bool:
         """Recursively search for $include directives."""
@@ -376,12 +385,12 @@ class Dependencies:
     def add(self, child: str, parent: str, label: str = ""):
         if child not in self._dependencies:
             self._dependencies[child] = []
-        self._dependencies[child].append([parent, label])
+        self._dependencies[child].append((parent, label))
 
     def __iter__(self):
         return iter(self._dependencies)
 
-    def __getitem__(self, key: str) -> list[str]:
+    def __getitem__(self, key: str) -> list[tuple[str, str]]:
         return self._dependencies[key]
 
     def keys(self):
@@ -430,7 +439,7 @@ def process_includes(
             if path in dependencies:
                 for dependency, directive in dependencies[path]:
                     if dependency == path:
-                        collector.handle(SelfInheritanceError(path, target))
+                        collector.handle(SelfInheritanceError(path, dependency))
                     elif directive == INCLUDE_KEY and dependencies.exists(
                         path, dependency, PROFILES_KEY
                     ):

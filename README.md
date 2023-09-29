@@ -30,7 +30,7 @@ In the future, this validation should also ensure the following:
 
 ```
 poetry install
-poetry run python -m ocsf_validator.runner <schema_path>
+poetry run python -m ocsf_validator <schema_path>
 ```
 
 ## Package Structure
@@ -67,8 +67,8 @@ If you're adding a validator, do the following:
 
 
 ## TODO
-There is still plenty to be done!
 
+There is still plenty to be done!
 
 ### General
 

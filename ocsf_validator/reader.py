@@ -116,6 +116,9 @@ class Reader(ABC):
         return list(matched)
 
     def match(self, pattern: Optional[Pattern] = None) -> Iterable[str]:
+        if pattern is not None:
+            pattern = Matcher.make(pattern)
+
         for k in self._data.keys():
             if pattern is None or pattern.match(k):
                 yield k
@@ -141,91 +144,6 @@ class Reader(ABC):
             accumulator = op(self, k, accumulator)
 
         return accumulator
-
-    def find_include(
-        self, include: str, relative_to: Optional[str] = None
-    ) -> str | None:
-        """Find a file from an OCSF $include or profiles directive.
-
-        For a given file f, search:
-          extn/f
-          extn/f.json
-          f
-          f.json
-        """
-
-        filenames = [include]
-        if Path(include).suffix != ".json":
-            filenames.append(include + ".json")
-
-        for file in filenames:
-            if relative_to is not None:
-                # Search extension for relative include path, e.g. /includes/thing.json -> /extensions/stuff/includes/thing.json
-                extn = self.extension(relative_to)
-                if extn is not None:
-                    k = self.key("extensions", extn, file)
-                    if k in self._data:
-                        return k
-
-            k = self.key(file)
-            if k in self._data:
-                return k
-
-        return None
-
-    def find_profile(self, profile: str, relative_to: str) -> str | None:
-        """Find a file from an OCSF profiles directive.
-
-        For a given profile p, search:
-          extn/profiles/p
-          extn/profiles/p.json
-          profiles/p
-          profiles/p.json
-          extn/p
-          extn/p.json
-          p
-          p.json
-        """
-        file = self.find_include(profile, relative_to)
-        if file is None:
-            path = str(Path("profiles") / Path(profile))
-            file = self.find_include(path, relative_to)
-
-        return file
-
-    def find_base(self, base: str, relative_to: str) -> str | None:
-        """Find the location of a base record in an extends directive.
-
-        parameters:
-            base: str         The base as it's described in the extends
-                              directive, without a path or an extension.
-            relative_to: str  The full path from the schema root to the record
-                              extending the base.
-        """
-        # if base in self._data:
-        #    return base
-
-        base_path = Path(base)
-        if base_path.suffix != ".json":
-            base += ".json"
-
-        # Search the current directory and each parent directory
-        path = Path(relative_to)
-        extn = self.extension(relative_to)
-
-        while path != path.parent:
-            test = str(path / base)
-            if test in self._data and test != relative_to:
-                return test
-            elif extn is not None:
-                woextn = Path(*list(path.parts)[2:]) / base
-                test = str(woextn)
-                if test in self._data:
-                    return test
-
-            path = path.parent
-
-        return None
 
 
 class DictReader(Reader):

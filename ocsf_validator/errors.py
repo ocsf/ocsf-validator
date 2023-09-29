@@ -11,7 +11,7 @@ class Collector:
     notice the collector until `throw` is `False`.
     """
 
-    default: TCollector
+    default: TCollector  # type: ignore
     """Simple singleton used whenever an Optional[Collector] parameter is None."""
 
     def __init__(self, throw: bool = True):
@@ -80,9 +80,9 @@ class MissingRequiredKeyError(ValidationError):
         self.trail = trail
 
         if trail is None:
-            trail = ""
+            trail_str = ""
         else:
-            trail = ".".join(trail)
+            trail_str = ".".join(trail)
 
         if cls is None:
             cls_str = ""
@@ -90,7 +90,7 @@ class MissingRequiredKeyError(ValidationError):
             cls_str = cls.__name__ + "."
 
         super().__init__(
-            f"Missing required key `{cls_str}{key}` at `{trail}` in {file}"
+            f"Missing required key `{cls_str}{key}` at `{trail_str}` in {file}"
         )
 
 
@@ -108,16 +108,18 @@ class UnknownKeyError(ValidationError):
         self.trail = trail
 
         if trail is None:
-            trail = ""
+            trail_str = ""
         else:
-            trail = ".".join(trail)
+            trail_str = ".".join(trail)
 
         if cls is None:
             cls_str = ""
         else:
             cls_str = cls.__name__
 
-        super().__init__(f"Unrecognized key `{key}` of `{cls}` at `{trail}` in {file}")
+        super().__init__(
+            f"Unrecognized key `{key}` of `{cls_str}` at `{trail_str}` in {file}"
+        )
 
 
 class DependencyError(ValidationError):
@@ -148,7 +150,7 @@ class ImpreciseBaseError(DependencyError):
         super().__init__(
             file,
             include,
-            f"Imprecise and possibly ambiguous base record definition '{include}' in {file}",
+            f"Possibly ambiguous base record definition '{include}' in {file}",
         )
 
 
@@ -195,5 +197,5 @@ class IncludeTypeMismatchError(ValidationError):
             self.cls: str = t.__name__
         self.directive = directive
         super().__init__(
-            f"`{direcetive}` type mismatch in {file}: expected type `{self.cls}` for {include}"
+            f"`{directive}` type mismatch in {file}: expected type `{self.cls}` for {include}"
         )

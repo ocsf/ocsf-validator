@@ -3,11 +3,10 @@
 """
 
 import traceback
-from argparse import ArgumentParser
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from termcolor import colored
 
@@ -83,7 +82,7 @@ class ValidatorOptions:
     include_type_mismatch: int = Severity.WARN
     """Unexpected include type."""
 
-    def severity(self, err: errors.ValidationError):
+    def severity(self, err: Exception):
         match type(err):
             case errors.MissingRequiredKeyError:
                 return self.missing_key
@@ -163,7 +162,7 @@ class ValidationRunner:
         messages: dict[str, dict[int, set[str]]] = {}
         collector = errors.Collector(throw=False)
 
-        def test(label: str, code: callable):
+        def test(label: str, code: Callable):
             message: str = ""
             code()
 
@@ -172,7 +171,7 @@ class ValidationRunner:
                 print("")
                 print(self.txt_info("TESTING:"), self.txt_emphasize(label))
 
-            for err in collector:
+            for err in collector.exceptions():
                 severity = self.options.severity(err)
 
                 if severity not in messages[label]:
@@ -200,10 +199,16 @@ class ValidationRunner:
                 base_path=Path(self.options.base_path),
                 read_extensions=self.options.extensions,
             )
+            reader = None
             try:
                 reader = FileReader(opts)
             except errors.ValidationError as err:
                 collector.handle(err)
+
+            if reader is None:
+                print(self.txt_crash("FATAL"), "Unable to initialize schema")
+                exit()
+
             test("Schema definitions can be loaded", lambda: None)
 
             types = TypeMapping(reader, collector)
@@ -273,15 +278,3 @@ class ValidationRunner:
 
             print("")
             exit(exit_code)
-
-
-if __name__ == "__main__":
-    parser = ArgumentParser(prog="ocsf-validator", description="OCSF Schema Validation")
-    parser.add_argument("path", help="The OCSF schema root directory", action="store")
-    args = parser.parse_args()
-
-    opts = ValidatorOptions(base_path=args.path)
-
-    validator = ValidationRunner(opts)
-
-    validator.validate()
