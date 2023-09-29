@@ -368,6 +368,8 @@ class IncludeParser(MergeParser):
 
 
 class Dependencies:
+    """A friendly list of dependencies."""
+
     def __init__(self):
         self._dependencies: dict[str, list[tuple[str, str]]] = {}
 

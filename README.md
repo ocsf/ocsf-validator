@@ -1,21 +1,48 @@
 # OCSF Schema Validator
 
-## Structure
+A utility to validate contributes to the OCSF Schema.
 
-In short:
+The [OCSF Schema](https://github.com/ocsf/ocsf-schema) is defined
 
- - The `Reader`s in `reader.py` represent collections of unprocessed, unvalidated schema definitions. Of these, `FileReader` reads files from a copy of the `ocsf-schema` repository, so it's probably the one you want.
- - `errors.py` contains exceptions raised by validation steps that inherit from `ValidationError`, as well as a special error `Collector`. Throughout this package, non-fatal exceptions are sent to a `Collector` instead of being `raise`d. The `Collector` will raise exceptions by default, but can also collect them to be dealt with later. The `ValidationRunner` exploits this for pretty output of failed validations.
- - The processor functions in `processors.py` apply includes, inheritance, and profiles to otherwise partial schema definitions. They also merge attribute details from `dictionary.json`. Be warned that these functions are side-effecting: they operate directly on the schema definitions in a `Reader`. This doesn't sit well with me, but passing lots of copies of the whole schema around didn't feel right, either, and this package is meant to be single-threaded.
- - The validator functions in `validators.py` test schema definitions for various problematic conditions. If you're extending this module, chances are you want to add validators.
- - The `ValidationRunner` in `runner.py` is a convenient command line entry point for validating a copy of the OCSF schema. It ties together the building blocks above.
+## Current Validations
+
+The validator can currently perform the following validations:
+
+ - [X] All required keys are present
+ - [X] There are no unknown keys
+ - [X] Dependency targets are resolvable and exist
+ - [X] All attributes in `dictionary.json` are used
+ - [X] There are no redundant `profiles` and `$include` targets
+
+## Future Validations
+
+In the future, this validation should also ensure the following:
+
+ - [ ] The contents of `categories.json` match the directory structure of `/events`
+ - [ ] There are no unused enums
+ - [ ] There are no unused profiles
+ - [ ] There are no unused imports
+ - [ ] There are no name collisions between extensions
+ - [ ] There are no name collisions between objects and events
 
 
 ## Running the validator
 
 ```
+poetry install
 poetry run python -m ocsf_validator.runner <schema_path>
 ```
+
+## Package Structure
+
+In short:
+
+ - The `Reader`s in `reader.py` represent collections of unprocessed, unvalidated schema definitions. Of these, `FileReader` reads files from a copy of the `ocsf-schema` repository, so it's probably the one you want.
+ - `errors.py` contains exceptions raised by validation steps that inherit from `ValidationError`, as well as a special error `Collector`. Throughout this package, non-fatal exceptions are sent to a `Collector` instead of being `raise`d. The `Collector` will raise exceptions by default, but can also collect them to be dealt with later. The `ValidationRunner` exploits this for pretty output of failed validations.
+ - The contents of `processor.py` apply includes, inheritance, and profiles to otherwise partial schema definitions. They also merge attribute details from `dictionary.json`. Be warned that these processors are side-effecting: they operate directly on the schema definitions in a `Reader`. You'll probably just want to invoke `process_includes` and run away.
+ - The validator functions in `validators.py` test schema definitions for various problematic conditions. If you're extending this module, chances are you want to add validators.
+ - The `ValidationRunner` in `runner.py` is a convenient command line entry point for validating a copy of the OCSF schema. It ties together the building blocks above.
+
 
 ## Enhancing the validator
 
@@ -40,10 +67,12 @@ If you're adding a validator, do the following:
 
 
 ## TODO
+There is still plenty to be done!
+
 
 ### General
 
- - [X] Include all paths and types in validation
+ - [ ] Add more validators.
  - [ ] Are things named consistently across (and within) modules?
  - [ ] Inline documentation could be better.
  - [ ] This README could be better.
@@ -51,47 +80,14 @@ If you're adding a validator, do the following:
  - [ ] Clean up * imports, especially in `__init__.py`.
  - [ ] Consider any imports in `__init__.py` that could be package-protected.
 
-### Processors
-
- - [X] Refactor optional match mode parameters to be a Match object with a Pattern type of str | Match.
- - [X] Canned patterns for event, object, etc.
- - [X] Type detection of records based on key.
- - [X] Cyclical dependencies...
- - [X] Exclude keys that match the included record type (e.g. OcsfProfile) but not the destination record type for flavors of include.
- - [X] Refactor find_include, etc., from Reader to MergeParsers
- - [X] Refactor reader and processor unit tests
-
-### Runner
-
- - [ ] Write a shell script to run the ValidationRunner.
- - [ ] Refactor runner __main__ code to __main__.py
- - [ ] Show test summary at end of validation results instead of beginning
-
 ### Pipeline
 
  - [ ] Action for this repository to run formatters and tests on PRs.
- - [ ] Action for this repository to publish to PyPi
+ - [ ] Add a coverage report.
+ - [ ] Action for this repository to publish to PyPi.
  - [ ] Action for the OCSF Schema repository to run the validation runner on PRs.
 
 ### Testing
 
  - [ ] Unit tests for TypeMapping
-
-### Validators
-
- - [X] Required keys (including nested in attrs)
- - [ ] No unknown keys
-    - [ ] Fix "description:" key
- - [X] Include targets exist
- - [X] Profile targets exist
- - [X] Inheritance targets (`extends`) exist
- - [ ] Categories match directories in events
- - [ ] Warn of unused dictionary items
- - [ ] Warn of unused enums
- - [ ] Warn of unused profiles
- - [ ] Warn of unused includes
- - [ ] Validate types for attributes
- - [ ] Type matching
- - [ ] Name collisions between extensions
- - [ ] Name collisions between objects and events
- - [ ] Warn of redundant `profiles` and `$include` targets (it is convention to have a `profiles` directive at the top level and an `$include` to the same profile in the `attributes` section, but the `$include` would fail and this seems redundant anyway).
+ - [ ] Test coverage could be a lot better in general

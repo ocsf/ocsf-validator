@@ -211,7 +211,7 @@ class ValidationRunner:
 
             # Validate dependencies
             test(
-                "Dependency targets are resolvable",
+                "Dependency targets are resolvable and exist",
                 lambda: validate_include_targets(
                     reader, collector=collector, types=types
                 ),
@@ -231,7 +231,7 @@ class ValidationRunner:
             )
 
             test(
-                "All keys are recognized",
+                "There are no unrecognized keys",
                 lambda: validate_no_unknown_keys(
                     reader, collector=collector, types=types
                 ),
