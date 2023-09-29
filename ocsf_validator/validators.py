@@ -31,7 +31,7 @@ def validate_required_keys(
             for k in defn.__required_keys__:
                 t = leaf_type(defn, k)
                 if k not in data:
-                    collector.handle(MissingRequiredeyError(k, file, defn, trail))
+                    collector.handle(MissingRequiredKeyError(k, file, defn, trail))
                 elif t is not None and is_ocsf_type(t):
                     if isinstance(data[k], dict):
                         # dict[str, Ocsf____]
