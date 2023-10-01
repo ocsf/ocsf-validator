@@ -1,10 +1,19 @@
 # OCSF Schema Validator
 
-A utility to validate contributes to the OCSF Schema.
+A utility to validate contributions to the [OCSF
+schema](https://github.com/ocsf/ocsf-schema), intended to prevent human error
+when contributing to the schema in order to keep the schema machine-readable.
 
-The [OCSF Schema](https://github.com/ocsf/ocsf-schema) is defined
+OCSF provides several include mechanisms to facilitate reuse, but this means
+individual schema files may be incomplete. This complicates using off-the-shelf
+schema definition tools for validation.
 
-## Current Validations
+[Query][https://www.query.ai] is a federated search solution that normalizes
+disparate security data to OCSF. This validator is adapted from active code and
+documentation generation tools written by the Query team.
+
+
+## Supported Validations
 
 The validator can currently perform the following validations:
 
@@ -14,7 +23,7 @@ The validator can currently perform the following validations:
  - [X] All attributes in `dictionary.json` are used
  - [X] There are no redundant `profiles` and `$include` targets
 
-## Future Validations
+## Planned Validations
 
 In the future, this validation should also ensure the following:
 
@@ -28,23 +37,49 @@ In the future, this validation should also ensure the following:
 
 ## Running the validator
 
+1. Install the validator using `pip` or `poetry`. (well, once we're publishing it...)
+2. Clone a copy of the OCSF schema, if you don't already have one.
+3. Invoke the validator with the location of your copy of the OCSF schema.
+
 ```
-poetry install
 poetry run python -m ocsf_validator <schema_path>
 ```
 
-## Package Structure
+## Technical Overview
 
-In short:
+The OCSF metaschema is represented as record types by filepath, achieved as follows:
 
- - The `Reader`s in `reader.py` represent collections of unprocessed, unvalidated schema definitions. Of these, `FileReader` reads files from a copy of the `ocsf-schema` repository, so it's probably the one you want.
- - `errors.py` contains exceptions raised by validation steps that inherit from `ValidationError`, as well as a special error `Collector`. Throughout this package, non-fatal exceptions are sent to a `Collector` instead of being `raise`d. The `Collector` will raise exceptions by default, but can also collect them to be dealt with later. The `ValidationRunner` exploits this for pretty output of failed validations.
- - The contents of `processor.py` apply includes, inheritance, and profiles to otherwise partial schema definitions. They also merge attribute details from `dictionary.json`. Be warned that these processors are side-effecting: they operate directly on the schema definitions in a `Reader`. You'll probably just want to invoke `process_includes` and run away.
- - The validator functions in `validators.py` test schema definitions for various problematic conditions. If you're extending this module, chances are you want to add validators.
- - The `ValidationRunner` in `runner.py` is a convenient command line entry point for validating a copy of the OCSF schema. It ties together the building blocks above.
+ 1. Record types are represented using Python's type system by defining them as Python `TypedDict`s in `types.py`. This allows the validator to take advantage of Python's reflection capabilities.
+ 2. Files and record types are associated by pattern matching the file paths. These patterns are named in `matchers.py` to allow mistakes to be caught by a type checker.
+ 3. Types are mapped to filepath patterns in `type_mapping.py`.
+
+The contents of the OCSF schema to be validated are primarily represented as a `Reader` defined in `reader.py`. `Reader`s read the schema definitions (usually from a filesystem) and and contain them with little judgement. The `process_includes` function and other contents of `processor.py` mutate the contents of a `Reader` by applying OCSF's various include mechanisms.
+
+Validators are defined in `validators.py` and test the schema contents for various problematic conditions. Validators should pass `Exception`s to a speciall error `Collector` defined in `errors.py` along with a variety of custom exception types that represent problematic schema states. The `Collector` raises errors by default, but can also hold them until they're aggregated by a larger validation process.
+
+The `ValidationRunner` combines all of the building blocks above to read a proposed schema from a filesystem, validate the schema, and provide useful output and a non-zero exit code if any errors were encountered.
 
 
-## Enhancing the validator
+## Notes on dependency resolution
+
+OCSF provides several mechanisms for reusing schema definitions.
+
+TODO: expand upon resolution and merge order.
+
+### $include
+
+
+### extends
+
+
+### profiles
+
+
+### dictionary.json
+
+
+
+## Contributing
 
 After checking out, you'll want to install dependencies:
 ```
