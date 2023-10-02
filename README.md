@@ -18,7 +18,7 @@ documentation generation tools written by the Query team.
 The validator can currently perform the following validations:
 
  - [X] All required keys are present
- - [X] There are no unknown keys
+ - [X] There are no unrecognized keys
  - [X] Dependency targets are resolvable and exist
  - [X] All attributes in `dictionary.json` are used
  - [X] There are no redundant `profiles` and `$include` targets
@@ -56,14 +56,14 @@ The OCSF metaschema is represented as record types by filepath, achieved as foll
 
 The contents of the OCSF schema to be validated are primarily represented as a `Reader` defined in `reader.py`. `Reader`s read the schema definitions (usually from a filesystem) and and contain them with little judgement. The `process_includes` function and other contents of `processor.py` mutate the contents of a `Reader` by applying OCSF's various include mechanisms.
 
-Validators are defined in `validators.py` and test the schema contents for various problematic conditions. Validators should pass `Exception`s to a speciall error `Collector` defined in `errors.py` along with a variety of custom exception types that represent problematic schema states. The `Collector` raises errors by default, but can also hold them until they're aggregated by a larger validation process.
+Validators are defined in `validators.py` and test the schema contents for various problematic conditions. Validators should pass `Exception`s to a special error `Collector` defined in `errors.py`. This module also defines a number of custom exception types that represent problematic schema states. The `Collector` raises errors by default, but can also hold them until they're aggregated by a larger validation process (e.g., the `ValidationRunner`).
 
 The `ValidationRunner` combines all of the building blocks above to read a proposed schema from a filesystem, validate the schema, and provide useful output and a non-zero exit code if any errors were encountered.
 
 
 ## Notes on dependency resolution
 
-OCSF provides several mechanisms for reusing schema definitions.
+OCSF provides several mechanisms for reusing schema definitions. They are implemented in `processor.py`, but it's a relatively large module. Below is a summary of dependency behavior in the validator.
 
 
 ### $include
@@ -97,7 +97,7 @@ There are events in the schema today that inherit from events in sibling categor
 
 ### profiles
 
-A `profiles` references mix-in traits that can apply to the record for certain applications. Profiles are applied to records by `process_includes` so that their contents can be validated.
+A `profiles` directive references mix-in traits that can apply to the record for certain applications. Profiles are applied to records by `process_includes` so that their contents can be validated.
 
 
 For a requested profile `p`, the search order will be:
