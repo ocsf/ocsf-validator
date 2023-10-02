@@ -8,7 +8,7 @@ OCSF provides several include mechanisms to facilitate reuse, but this means
 individual schema files may be incomplete. This complicates using off-the-shelf
 schema definition tools for validation.
 
-[Query][https://www.query.ai] is a federated search solution that normalizes
+[Query](https://www.query.ai) is a federated search solution that normalizes
 disparate security data to OCSF. This validator is adapted from active code and
 documentation generation tools written by the Query team.
 
@@ -27,6 +27,7 @@ The validator can currently perform the following validations:
 
 In the future, this validation should also ensure the following:
 
+ - [ ] There are no name collisions within record types
  - [ ] The contents of `categories.json` match the directory structure of `/events`
  - [ ] There are no unused enums
  - [ ] There are no unused profiles
@@ -64,19 +65,58 @@ The `ValidationRunner` combines all of the building blocks above to read a propo
 
 OCSF provides several mechanisms for reusing schema definitions.
 
-TODO: expand upon resolution and merge order.
 
 ### $include
+
+The `$include` directive allows a record type author to include the contents of any other file. These directives are supported in many locations throughout the schema.
+
+When an `$include` directive is used, the contents of the included file are merged inline. Properties in the included file will lose out over properties in the source file. If an `$include` directive is used in a nested dictionary, the processor will merge the contents of the same key in the included file. For instance, using an `$include: "B.json"` in the `attributes` key of `A.json` will merge the contents of the `attributes` key from `A.json` with the contents of the `attributes` key in `B.json`.
+
+Include targets are assumed to be relative to the root of the schema or the root of the current extension.
 
 
 ### extends
 
+`extends` directives work something like inheritance in OOP. The base record type targeted in an `extends` directive will be merged with the child record type. Any properties defined in the child record win. The first matching base record type will be the only one used.
+
+For a requested base `b` from a child record at `events/activity/thing.json`, the search order will be:
+
+- events/activity/b.json
+- events/b.json
+
+For a requested base `b` in a child record at `extn/stuff/events/activity/thing.json`, the search order will be:
+
+- extn/stuff/events/activity/b.json
+- events/activity/b.json
+- extn/stuff/events/b.json
+- events/b.json
+- extn/stuff/b.json
+
+There are events in the schema today that inherit from events in sibling categories. This seems potentially ambiguous, so a warning is generated. If the search orders above don't find a match, then all sibling directories will also be searched.
+
 
 ### profiles
+
+A `profiles` references mix-in traits that can apply to the record for certain applications. Profiles are applied to records by `process_includes` so that their contents can be validated.
+
+
+For a requested profile `p`, the search order will be:
+
+- extn/profiles/p
+- extn/profiles/p.json
+- profiles/p
+- profiles/p.json
+- extn/p
+- extn/p.json
+- p
+- p.json
 
 
 ### dictionary.json
 
+The schema reuses attribute details from a shared attribute dictionary. Defining your record type with `attributes: { "one": {...}}` will cause the attribute details defined in `dictionary.json` to be merged with the attribute definition in the record type. Properties defined in the record type take precedence.
+
+Attributes are currently compared by their key in the `attributes` dictionaries and not by their `name` property.
 
 
 ## Contributing
