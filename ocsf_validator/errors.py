@@ -210,3 +210,10 @@ class TypeNameCollisionError(ValidationError):
         super().__init__(
             f"Name collision for `{name}` within `{kind}` between {file1} and {file2}"
         )
+
+class UndefinedAttributeError(ValidationError):
+    def __init__(self, attr: str, file: str):
+        self.attr = str
+        self.file = file
+        super().__init__(f"Attribute `{attr}` in {file} is not defined in dictionary.json")
+

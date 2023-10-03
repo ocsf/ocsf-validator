@@ -15,6 +15,7 @@ from ocsf_validator.processor import process_includes
 from ocsf_validator.reader import FileReader, ReaderOptions
 from ocsf_validator.type_mapping import TypeMapping
 from ocsf_validator.validators import (validate_include_targets,
+                                       validate_undefined_attrs,
                                        validate_intra_type_collisions,
                                        validate_no_unknown_keys,
                                        validate_required_keys,
@@ -86,6 +87,9 @@ class ValidatorOptions:
     intra_type_name_collision: int = Severity.WARN
     """Same name used multiple times within a type."""
 
+    undefined_attribute: int = Severity.WARN
+    """Attributes used in a record but not defined in `dictionary.json`."""
+
     def severity(self, err: Exception):
         match type(err):
             case errors.MissingRequiredKeyError:
@@ -116,6 +120,8 @@ class ValidatorOptions:
                 return self.include_type_mismatch
             case errors.TypeNameCollisionError:
                 return self.intra_type_name_collision
+            case errors.UndefinedAttributeError:
+                return self.undefined_attribute
             case _:
                 return Severity.INFO
 
@@ -251,6 +257,13 @@ class ValidationRunner:
             test(
                 "All attributes in the dictionary are used",
                 lambda: validate_unused_attrs(reader, collector=collector, types=types),
+            )
+
+            test(
+                "All attributes are defined in dictionary.json",
+                lambda: validate_undefined_attrs(
+                    reader, collector=collector, types=types
+                ),
             )
 
             test(

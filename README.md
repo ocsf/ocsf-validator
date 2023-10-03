@@ -23,6 +23,7 @@ The validator can currently perform the following validations:
  - [X] All attributes in `dictionary.json` are used
  - [X] There are no redundant `profiles` and `$include` targets
  - [X] There are no name collisions within record types
+ - [X] All attributes are defined in `dictionary.json`
 
 ## Planned Validations
 

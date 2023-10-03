@@ -6,7 +6,7 @@ from ocsf_validator.errors import (Collector, InvalidMetaSchemaError,
                                    MissingRequiredKeyError,
                                    TypeNameCollisionError,
                                    UndetectableTypeError, UnknownKeyError,
-                                   UnusedAttributeError)
+                                   UnusedAttributeError, UndefinedAttributeError)
 from ocsf_validator.matchers import (DictionaryMatcher, EventMatcher,
                                      ExtensionMatcher, ObjectMatcher)
 from ocsf_validator.processor import process_includes
@@ -155,6 +155,19 @@ def validate_unused_attrs(
         for k in d[ATTRIBUTES_KEY]:
             if k not in attrs:
                 collector.handle(UnusedAttributeError(k))
+
+def validate_undefined_attrs(reader: Reader, collector: Collector = Collector.default, types: Optional[TypeMapping] = None,):
+    if types is None:
+        types = TypeMapping(reader)
+
+    def validate(reader: Reader, file: str):
+        record = reader[file]
+        if ATTRIBUTES_KEY in record:
+            d = reader.find("dictionary.json")
+            if d is not None:
+                for k in record[ATTRIBUTES_KEY]:
+                    if k not in d:
+                        collector.handle(UndefinedAttributeError(k, file))
 
 
 def validate_intra_type_collisions(
