@@ -54,7 +54,7 @@ The OCSF metaschema is represented as record types by filepath, achieved as foll
  2. Files and record types are associated by pattern matching the file paths. These patterns are named in `matchers.py` to allow mistakes to be caught by a type checker.
  3. Types are mapped to filepath patterns in `type_mapping.py`.
 
-The contents of the OCSF schema to be validated are primarily represented as a `Reader` defined in `reader.py`. `Reader`s read the schema definitions (usually from a filesystem) and and contain them with little judgement. The `process_includes` function and other contents of `processor.py` mutate the contents of a `Reader` by applying OCSF's various include mechanisms.
+The contents of the OCSF schema to be validated are primarily represented as a `Reader` defined in `reader.py`. `Reader`s load the schema definitions to be validated from a source (usually from a filesystem) and contain them without judgement. The `process_includes` function and other contents of `processor.py` mutate the contents of a `Reader` by applying OCSF's various include mechanisms.
 
 Validators are defined in `validators.py` and test the schema contents for various problematic conditions. Validators should pass `Exception`s to a special error `Collector` defined in `errors.py`. This module also defines a number of custom exception types that represent problematic schema states. The `Collector` raises errors by default, but can also hold them until they're aggregated by a larger validation process (e.g., the `ValidationRunner`).
 
