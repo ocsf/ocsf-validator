@@ -61,64 +61,6 @@ Validators are defined in `validators.py` and test the schema contents for vario
 The `ValidationRunner` combines all of the building blocks above to read a proposed schema from a filesystem, validate the schema, and provide useful output and a non-zero exit code if any errors were encountered.
 
 
-## Notes on dependency resolution
-
-OCSF provides several mechanisms for reusing schema definitions. They are implemented in `processor.py`, but it's a relatively large module. Below is a summary of dependency behavior in the validator.
-
-
-### $include
-
-The `$include` directive allows a record type author to include the contents of any other file. These directives are supported in many locations throughout the schema.
-
-When an `$include` directive is used, the contents of the included file are merged inline. Properties in the included file will lose out over properties in the source file. If an `$include` directive is used in a nested dictionary, the processor will merge the contents of the same key in the included file. For instance, using an `$include: "B.json"` in the `attributes` key of `A.json` will merge the contents of the `attributes` key from `A.json` with the contents of the `attributes` key in `B.json`.
-
-Include targets are assumed to be relative to the root of the schema or the root of the current extension.
-
-
-### extends
-
-`extends` directives work something like inheritance in OOP. The base record type targeted in an `extends` directive will be merged with the child record type. Any properties defined in the child record win. The first matching base record type will be the only one used.
-
-For a requested base `b` from a child record at `events/activity/thing.json`, the search order will be:
-
-- events/activity/b.json
-- events/b.json
-
-For a requested base `b` in a child record at `extn/stuff/events/activity/thing.json`, the search order will be:
-
-- extn/stuff/events/activity/b.json
-- events/activity/b.json
-- extn/stuff/events/b.json
-- events/b.json
-- extn/stuff/b.json
-
-There are events in the schema today that inherit from events in sibling categories. This seems potentially ambiguous, so a warning is generated. If the search orders above don't find a match, then all sibling directories will also be searched.
-
-
-### profiles
-
-A `profiles` directive references mix-in traits that can apply to the record for certain applications. Profiles are applied to records by `process_includes` so that their contents can be validated.
-
-
-For a requested profile `p`, the search order will be:
-
-- extn/profiles/p
-- extn/profiles/p.json
-- profiles/p
-- profiles/p.json
-- extn/p
-- extn/p.json
-- p
-- p.json
-
-
-### dictionary.json
-
-The schema reuses attribute details from a shared attribute dictionary. Defining your record type with `attributes: { "one": {...}}` will cause the attribute details defined in `dictionary.json` to be merged with the attribute definition in the record type. Properties defined in the record type take precedence.
-
-Attributes are currently compared by their key in the `attributes` dictionaries and not by their `name` property.
-
-
 ## Contributing
 
 After checking out, you'll want to install dependencies:
