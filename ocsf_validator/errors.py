@@ -199,3 +199,14 @@ class IncludeTypeMismatchError(ValidationError):
         super().__init__(
             f"`{directive}` type mismatch in {file}: expected type `{self.cls}` for {include}"
         )
+
+
+class TypeNameCollisionError(ValidationError):
+    def __init__(self, name: str, kind: str, file1: str, file2: str):
+        self.name = name
+        self.kind = kind
+        self.file1 = file1
+        self.file2 = file2
+        super().__init__(
+            f"Name collision for `{name}` within `{kind}` between {file1} and {file2}"
+        )

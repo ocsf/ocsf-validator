@@ -4,6 +4,7 @@ from typing import (Dict, NotRequired, Optional, Required, get_type_hints,
 
 from ocsf_validator.errors import (Collector, InvalidMetaSchemaError,
                                    MissingRequiredKeyError,
+                                   TypeNameCollisionError,
                                    UndetectableTypeError, UnknownKeyError,
                                    UnusedAttributeError)
 from ocsf_validator.matchers import (DictionaryMatcher, EventMatcher,
@@ -96,16 +97,6 @@ def validate_no_unknown_keys(
                     else:
                         compare_keys(data[k], t, file, trail + [k])
 
-                    """if isinstance(data[k], dict):
-                        # dict[str, Ocsf____]
-                        for k2, val in data[k].items():
-                            if k2 != INCLUDE_KEY:
-                                compare_keys(data[k][k2], t, file, trail + [k, k2])
-                    else:
-                        print("leaf")
-                        compare_keys(data[k], t, file, trail + [k])
-                        """
-
         else:
             collector.handle(
                 InvalidMetaSchemaError(
@@ -142,6 +133,7 @@ def validate_unused_attrs(
     if types is None:
         types = TypeMapping(reader)
 
+    # TODO: Lift validate() function out and use a TypeMapping
     def make_validator(defn: type):
         def validate(reader: Reader, key: str, accum: set[str]):
             record = reader[key]
@@ -163,3 +155,27 @@ def validate_unused_attrs(
         for k in d[ATTRIBUTES_KEY]:
             if k not in attrs:
                 collector.handle(UnusedAttributeError(k))
+
+
+def validate_intra_type_collisions(
+    reader: Reader,
+    collector: Collector = Collector.default,
+    types: Optional[TypeMapping] = None,
+):
+    if types is None:
+        types = TypeMapping(reader)
+
+    found: dict[str, dict[str, list[str]]] = {}
+
+    def validate(reader: Reader, file: str):
+        t = str(types[file])
+        if t not in found:
+            found[t] = {}
+
+        if "name" in reader[file]:
+            name = reader[file]["name"]
+            if name not in found[t]:
+                found[t][name] = []
+            else:
+                raise TypeNameCollisionError(name, t, file, found[t][name][0])
+            found[t][name].append(file)

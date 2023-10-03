@@ -15,6 +15,7 @@ from ocsf_validator.processor import process_includes
 from ocsf_validator.reader import FileReader, ReaderOptions
 from ocsf_validator.type_mapping import TypeMapping
 from ocsf_validator.validators import (validate_include_targets,
+                                       validate_intra_type_collisions,
                                        validate_no_unknown_keys,
                                        validate_required_keys,
                                        validate_unused_attrs)
@@ -82,6 +83,9 @@ class ValidatorOptions:
     include_type_mismatch: int = Severity.WARN
     """Unexpected include type."""
 
+    intra_type_name_collision: int = Severity.WARN
+    """Same name used multiple times within a type."""
+
     def severity(self, err: Exception):
         match type(err):
             case errors.MissingRequiredKeyError:
@@ -110,6 +114,8 @@ class ValidatorOptions:
                 return self.undetectable_type
             case errors.IncludeTypeMismatchError:
                 return self.include_type_mismatch
+            case errors.TypeNameCollisionError:
+                return self.intra_type_name_collision
             case _:
                 return Severity.INFO
 
@@ -245,6 +251,13 @@ class ValidationRunner:
             test(
                 "All attributes in the dictionary are used",
                 lambda: validate_unused_attrs(reader, collector=collector, types=types),
+            )
+
+            test(
+                "Names are not used multiple times within a record type",
+                lambda: validate_intra_type_collisions(
+                    reader, collector=collector, types=types
+                ),
             )
 
         except Exception as err:

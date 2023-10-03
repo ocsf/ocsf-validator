@@ -22,12 +22,12 @@ The validator can currently perform the following validations:
  - [X] Dependency targets are resolvable and exist
  - [X] All attributes in `dictionary.json` are used
  - [X] There are no redundant `profiles` and `$include` targets
+ - [X] There are no name collisions within record types
 
 ## Planned Validations
 
 In the future, this validation should also ensure the following:
 
- - [ ] There are no name collisions within record types
  - [ ] The contents of `categories.json` match the directory structure of `/events`
  - [ ] There are no unused enums
  - [ ] There are no unused profiles
