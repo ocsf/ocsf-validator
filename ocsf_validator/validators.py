@@ -208,7 +208,7 @@ def validate_intra_type_collisions(
             if name not in found[t]:
                 found[t][name] = []
             else:
-                raise TypeNameCollisionError(name, t, file, found[t][name][0])
+                collector.handle(TypeNameCollisionError(name, t, file, found[t][name][0]))
             found[t][name].append(file)
 
     reader.apply(validate, AnyMatcher([ObjectMatcher(), EventMatcher()]))
