@@ -168,14 +168,15 @@ def validate_undefined_attrs(
     if types is None:
         types = TypeMapping(reader)
 
+    EXCLUDE = ["$include"]
+
     def validate(reader: Reader, file: str):
         record = reader[file]
         if ATTRIBUTES_KEY in record:
             d = reader.find("dictionary.json")
             if d is not None:
                 for k in record[ATTRIBUTES_KEY]:
-                    print("k", k)
-                    if k not in d[ATTRIBUTES_KEY]:
+                    if k not in d[ATTRIBUTES_KEY] and k not in EXCLUDE:
                         collector.handle(UndefinedAttributeError(k, file))
             else:
                 collector.handle(InvalidMetaSchemaError())
