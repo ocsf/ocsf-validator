@@ -15,10 +15,10 @@ from ocsf_validator.processor import process_includes
 from ocsf_validator.reader import FileReader, ReaderOptions
 from ocsf_validator.type_mapping import TypeMapping
 from ocsf_validator.validators import (validate_include_targets,
-                                       validate_undefined_attrs,
                                        validate_intra_type_collisions,
                                        validate_no_unknown_keys,
                                        validate_required_keys,
+                                       validate_undefined_attrs,
                                        validate_unused_attrs)
 
 

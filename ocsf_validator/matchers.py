@@ -1,12 +1,13 @@
 import re
 from abc import ABC
 from pathlib import Path
+from typing import Optional
 
 from ocsf_validator.types import *
 
 
 class Matcher:
-    def match(self, value: str):
+    def match(self, value: str) -> bool:
         raise NotImplementedError()
 
     @staticmethod
@@ -20,6 +21,22 @@ class Matcher:
 class TypeMatcher:
     def get_type(self) -> type:
         raise NotImplementedError()
+
+
+class AnyMatcher(Matcher):
+    def __init__(self, matchers: Optional[list[Matcher]] = None):
+        if matchers is not None:
+            self._matchers = matchers
+        else:
+            self._matchers = []
+
+    def match(self, value: str):
+        for matcher in self._matchers:
+            if matcher.match(value):
+                return True
+
+    def add(self, matcher: Matcher):
+        self._matchers.append(matcher)
 
 
 class RegexMatcher(Matcher):

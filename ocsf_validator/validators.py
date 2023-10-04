@@ -5,10 +5,13 @@ from typing import (Dict, NotRequired, Optional, Required, get_type_hints,
 from ocsf_validator.errors import (Collector, InvalidMetaSchemaError,
                                    MissingRequiredKeyError,
                                    TypeNameCollisionError,
+                                   UndefinedAttributeError,
                                    UndetectableTypeError, UnknownKeyError,
-                                   UnusedAttributeError, UndefinedAttributeError)
-from ocsf_validator.matchers import (DictionaryMatcher, EventMatcher,
-                                     ExtensionMatcher, ObjectMatcher)
+                                   UnusedAttributeError)
+from ocsf_validator.matchers import (AnyMatcher, DictionaryMatcher,
+                                     EventMatcher, ExtensionMatcher,
+                                     IncludeMatcher, ObjectMatcher,
+                                     ProfileMatcher)
 from ocsf_validator.processor import process_includes
 from ocsf_validator.reader import Reader
 from ocsf_validator.type_mapping import TypeMapping
@@ -156,7 +159,12 @@ def validate_unused_attrs(
             if k not in attrs:
                 collector.handle(UnusedAttributeError(k))
 
-def validate_undefined_attrs(reader: Reader, collector: Collector = Collector.default, types: Optional[TypeMapping] = None,):
+
+def validate_undefined_attrs(
+    reader: Reader,
+    collector: Collector = Collector.default,
+    types: Optional[TypeMapping] = None,
+):
     if types is None:
         types = TypeMapping(reader)
 
@@ -166,8 +174,18 @@ def validate_undefined_attrs(reader: Reader, collector: Collector = Collector.de
             d = reader.find("dictionary.json")
             if d is not None:
                 for k in record[ATTRIBUTES_KEY]:
-                    if k not in d:
+                    print("k", k)
+                    if k not in d[ATTRIBUTES_KEY]:
                         collector.handle(UndefinedAttributeError(k, file))
+            else:
+                collector.handle(InvalidMetaSchemaError())
+
+    reader.apply(
+        validate,
+        AnyMatcher(
+            [ObjectMatcher(), EventMatcher(), ProfileMatcher(), IncludeMatcher()]
+        ),
+    )
 
 
 def validate_intra_type_collisions(
@@ -192,3 +210,5 @@ def validate_intra_type_collisions(
             else:
                 raise TypeNameCollisionError(name, t, file, found[t][name][0])
             found[t][name].append(file)
+
+    reader.apply(validate, AnyMatcher([ObjectMatcher(), EventMatcher()]))

@@ -47,8 +47,8 @@ def test_unknown_keys():
     r = DictReader()
     r.set_data(d1)
 
-    # with pytest.raises(UnknownKeyError):
-    # validate_no_unknown_keys(r)
+    with pytest.raises(UnknownKeyError):
+        validate_no_unknown_keys(r)
 
 
 def test_validate_unused_attrs():
@@ -86,6 +86,61 @@ def test_validate_unused_attrs():
         }
     )
 
-    # with pytest.raises(UnusedAttributeError) as exc:
-    #    validate_unused_attrs(r)
-    # assert exc.value.attr == "three"
+    with pytest.raises(UnusedAttributeError) as exc:
+        validate_unused_attrs(r)
+    assert exc.value.attr == "three"
+
+
+def test_validate_undefined_attrs():
+    r = DictReader()
+    r.set_data(
+        {
+            "/dictionary.json": {
+                "attributes": {
+                    "one": {
+                        "name": "one",
+                        "caption": "One",
+                    },
+                },
+            },
+            "/objects/thing.json": {
+                "name": "thing",
+                "attributes": {
+                    "one": {"name": "one"},
+                    "two": {"name": "two"},
+                },
+            },
+        }
+    )
+
+    with pytest.raises(UndefinedAttributeError) as exc:
+        validate_undefined_attrs(r)
+    assert exc.value.attr == "two"
+
+
+def test_validate_intra_type_collisions():
+    r = DictReader()
+    r.set_data(
+        {
+            "/objects/thing.json": {
+                "name": "thing",
+                "attributes": {
+                    "one": {"name": "one"},
+                    "two": {"name": "two"},
+                },
+            },
+            "/objects/thing2.json": {
+                "name": "thing",
+                "attributes": {},
+            },
+        }
+    )
+
+    with pytest.raises(TypeNameCollisionError) as exc:
+        validate_intra_type_collisions(r)
+    assert exc.value.name == "thing"
+
+    r["/events/event.json"] = {"name": "thing"}
+    r["/objects/thing2.json"] = {"name": "thing2"}
+    # no error
+    validate_intra_type_collisions(r)
