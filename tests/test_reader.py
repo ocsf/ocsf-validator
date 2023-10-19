@@ -49,6 +49,7 @@ def test_apply():
 def test_find():
     r = reader()
     f = r.find("objects", "os.json")
+    assert f is not None
     assert "name" in f
 
 

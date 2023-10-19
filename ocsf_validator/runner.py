@@ -60,7 +60,7 @@ class ValidatorOptions:
     missing_inheritance: int = Severity.ERROR
     """An `extends` inheritance target is missing."""
 
-    imprecise_inheritance: int = Severity.WARN
+    imprecise_inheritance: int = Severity.INFO
     """An `extends` inheritance target is resolvable but imprecise and possibly ambiguous."""
 
     missing_key: int = Severity.ERROR
@@ -176,12 +176,13 @@ class ValidationRunner:
 
         def test(label: str, code: Callable):
             message: str = ""
+            failures: int = 0
             code()
 
             if label not in messages:
                 messages[label] = {}
                 print("")
-                print(self.txt_info("TESTING:"), self.txt_emphasize(label))
+                print(self.txt_info("TESTING") + ":", self.txt_emphasize(label))
 
             for err in collector.exceptions():
                 severity = self.options.severity(err)
@@ -191,13 +192,15 @@ class ValidationRunner:
 
                 messages[label][severity].add(str(err))
                 if severity > Severity.INFO or self.options.show_info:
-                    print("  ", self.txt_label(severity), err)
+                    if severity > Severity.INFO:
+                        failures += 1
+                    print("  ", self.txt_label(severity) + ":", err)
 
                 if severity == Severity.FATAL:
                     exit(2)
 
-            if len(collector) == 0:
-                print("  ", self.txt_pass("PASS"), "No problems identified.")
+            if failures == 0:
+                print("  ", self.txt_pass("PASS") + ":", "No problems identified.")
             collector.flush()
 
         try:
@@ -296,11 +299,11 @@ class ValidationRunner:
                     ]:
                         if sev in messages[k] and sev >= failure_threshold:
                             found = True
-                            print("  ", self.txt_fail("FAILED"), k)
+                            print("  ", self.txt_fail("FAILED") + ":", k)
                             exit_code = 1
 
                 if not found:
-                    print("  ", self.txt_pass("PASSED"), k)
+                    print("  ", self.txt_pass("PASSED") + ":", k)
 
             print("")
             exit(exit_code)

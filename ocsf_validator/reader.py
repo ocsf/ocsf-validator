@@ -116,6 +116,7 @@ class Reader(ABC):
         return list(matched)
 
     def match(self, pattern: Optional[Pattern] = None) -> Iterable[str]:
+        """Return a list of keys that match pattern."""
         if pattern is not None:
             pattern = Matcher.make(pattern)
 
