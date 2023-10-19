@@ -207,9 +207,7 @@ class TypeNameCollisionError(ValidationError):
         self.kind = kind
         self.file1 = file1
         self.file2 = file2
-        super().__init__(
-            f"Name collision for `{name}` between {file1} and {file2}"
-        )
+        super().__init__(f"Name collision for `{name}` between {file1} and {file2}")
 
 
 class UndefinedAttributeError(ValidationError):
