@@ -171,8 +171,8 @@ def validate_undefined_attrs(
     EXCLUDE = ["$include"]
 
     dicts = []
-    for dict in reader.match(DictionaryMatcher()):
-        dicts.append(reader[dict])
+    for d in reader.match(DictionaryMatcher()):
+        dicts.append(reader[d])
 
     if len(dicts) == 0:
         collector.handle(InvalidMetaSchemaError())
@@ -180,8 +180,8 @@ def validate_undefined_attrs(
     def validate(reader: Reader, file: str):
         record = reader[file]
         if ATTRIBUTES_KEY in record:
-            found = False
             for k in record[ATTRIBUTES_KEY]:
+                found = False
                 for d in dicts:
                     if k in d[ATTRIBUTES_KEY]:
                         found = True

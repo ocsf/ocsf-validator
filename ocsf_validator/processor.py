@@ -100,7 +100,9 @@ class DependencyResolver:
             if extn is not None:
                 # This is the strange case of `"profile": "linux/linux.json"`.
                 # Why not "profiles/linux.json"` or just "linux.json"?
-                file = self.resolve_include(str(Path("extensions", extn, "profiles") / Path(profile).name ))
+                file = self.resolve_include(
+                    str(Path("extensions", extn, "profiles") / Path(profile).name)
+                )
 
         return file
 
