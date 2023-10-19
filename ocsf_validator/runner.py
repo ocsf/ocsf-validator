@@ -60,7 +60,7 @@ class ValidatorOptions:
     missing_inheritance: int = Severity.ERROR
     """An `extends` inheritance target is missing."""
 
-    imprecise_inheritance: int = Severity.WARN
+    imprecise_inheritance: int = Severity.INFO
     """An `extends` inheritance target is resolvable but imprecise and possibly ambiguous."""
 
     missing_key: int = Severity.ERROR
@@ -176,6 +176,7 @@ class ValidationRunner:
 
         def test(label: str, code: Callable):
             message: str = ""
+            tally: int = 0
             code()
 
             if label not in messages:
@@ -191,12 +192,14 @@ class ValidationRunner:
 
                 messages[label][severity].add(str(err))
                 if severity > Severity.INFO or self.options.show_info:
+                    if severity > Severity.INFO:
+                        tally += 1
                     print("  ", self.txt_label(severity), err)
 
                 if severity == Severity.FATAL:
                     exit(2)
 
-            if len(collector) == 0:
+            if tally == 0:
                 print("  ", self.txt_pass("PASS"), "No problems identified.")
             collector.flush()
 

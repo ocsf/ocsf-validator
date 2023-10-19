@@ -170,16 +170,24 @@ def validate_undefined_attrs(
 
     EXCLUDE = ["$include"]
 
+    dicts = []
+    for dict in reader.match(DictionaryMatcher()):
+        dicts.append(reader[dict])
+
+    if len(dicts) == 0:
+        collector.handle(InvalidMetaSchemaError())
+
     def validate(reader: Reader, file: str):
         record = reader[file]
         if ATTRIBUTES_KEY in record:
-            d = reader.find("dictionary.json")
-            if d is not None:
-                for k in record[ATTRIBUTES_KEY]:
-                    if k not in d[ATTRIBUTES_KEY] and k not in EXCLUDE:
-                        collector.handle(UndefinedAttributeError(k, file))
-            else:
-                collector.handle(InvalidMetaSchemaError())
+            found = False
+            for k in record[ATTRIBUTES_KEY]:
+                for d in dicts:
+                    if k in d[ATTRIBUTES_KEY]:
+                        found = True
+
+                if found is False and k not in EXCLUDE:
+                    collector.handle(UndefinedAttributeError(k, file))
 
     reader.apply(
         validate,
@@ -209,7 +217,9 @@ def validate_intra_type_collisions(
             if name not in found[t]:
                 found[t][name] = []
             else:
-                collector.handle(TypeNameCollisionError(name, t, file, found[t][name][0]))
+                collector.handle(
+                    TypeNameCollisionError(name, t, file, found[t][name][0])
+                )
             found[t][name].append(file)
 
     reader.apply(validate, AnyMatcher([ObjectMatcher(), EventMatcher()]))
