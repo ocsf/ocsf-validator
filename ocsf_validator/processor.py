@@ -362,8 +362,14 @@ class IncludeParser(MergeParser):
                         self._collector.handle(MissingIncludeError(path, target))
                     elif update:
                         other = self._reader[t]
-                        for key in trail:
-                            other = other[key]
+                        try:
+                            for key in trail:
+                                other = other[key]
+                        except KeyError:
+                            # Older copies of the schema use files in enums/ that
+                            # don't mirror the structure of the files they're
+                            # being included into.
+                            pass
                         deep_merge(defn, other)
 
                 if remove:

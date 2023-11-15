@@ -82,6 +82,7 @@ class OcsfCategory(TypedDict):
     caption: str
     description: str
     uid: int
+    type: NotRequired[str] # older categories.json definitions
 
 
 class OcsfCategories(TypedDict):
