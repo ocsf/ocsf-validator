@@ -230,20 +230,21 @@ def validate_intra_type_collisions(
     reader.apply(validate, AnyMatcher([ObjectMatcher(), EventMatcher()]))
 
 
-def _get_registry(reader: Reader, base_uri: str) -> referencing.Registry:
+def _default_get_registry(reader: Reader, base_uri: str) -> referencing.Registry:
     registry = referencing.Registry()
     for schema_file_path in (reader.base_path / "metaschema").rglob("*.schema.json"):
         with open(schema_file_path, 'r') as file:
             schema = json.load(file)
             resource = referencing.Resource.from_contents(schema)
             registry = registry.with_resource(base_uri + schema_file_path.name, resource=resource)
+    return registry
 
 
 def validate_metaschemas(
     reader: Reader,
     collector: Collector = Collector.default,
     types: Optional[TypeMapping] = None,
-    get_registry: Callable[[Reader, str], referencing.Registry] = _get_registry
+    get_registry: Callable[[Reader, str], referencing.Registry] = _default_get_registry
 ):
     if types is None:
         types = TypeMapping(reader)
@@ -258,7 +259,7 @@ def validate_metaschemas(
     for metaschema, matcher in matchers.items():
         try:
             schema = registry.resolver(base_uri).lookup(metaschema).contents
-        except Exception as exc:
+        except referencing.exceptions.Unresolvable as exc:
             collector.handle(
                 InvalidMetaSchemaFileError(
                     f"The metaschema file for {metaschema} is invalid or missing. Error: {type(exc).__name__}"
