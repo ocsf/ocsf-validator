@@ -59,6 +59,8 @@ class InvalidBasePathError(ValidationError):
 class InvalidMetaSchemaError(ValidationError):
     ...
 
+class InvalidMetaSchemaFileError(ValidationError):
+    ...
 
 class UnusedAttributeError(ValidationError):
     def __init__(self, attr: str):

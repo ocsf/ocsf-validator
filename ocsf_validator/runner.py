@@ -91,6 +91,9 @@ class ValidatorOptions:
     undefined_attribute: int = Severity.WARN
     """Attributes used in a record but not defined in `dictionary.json`."""
 
+    invalid_metaschema_file: int = Severity.ERROR
+    """A JSON schema metaschema file is missing or invalid."""
+
     def severity(self, err: Exception):
         match type(err):
             case errors.MissingRequiredKeyError:
@@ -123,6 +126,8 @@ class ValidatorOptions:
                 return self.intra_type_name_collision
             case errors.UndefinedAttributeError:
                 return self.undefined_attribute
+            case errors.InvalidMetaSchemaFileError:
+                return self.invalid_metaschema_file
             case _:
                 return Severity.INFO
 

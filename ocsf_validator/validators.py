@@ -2,10 +2,12 @@ import inspect
 import jsonschema
 import json
 import referencing
+import referencing.exceptions
 from typing import (Callable, Dict, NotRequired, Optional, Required, get_type_hints,
                     is_typeddict)
 
 from ocsf_validator.errors import (Collector, InvalidMetaSchemaError,
+                                   InvalidMetaSchemaFileError,
                                    MissingRequiredKeyError,
                                    TypeNameCollisionError,
                                    UndefinedAttributeError,
@@ -254,8 +256,17 @@ def validate_metaschemas(
     }
 
     for metaschema, matcher in matchers.items():
-        def validate(reader: Reader, file: str):
+        try:
             schema = registry.resolver(base_uri).lookup(metaschema).contents
+        except Exception as exc:
+            collector.handle(
+                InvalidMetaSchemaFileError(
+                    f"The metaschema file for {metaschema} is invalid or missing. Error: {type(exc).__name__}"
+                )
+            )
+            continue
+            
+        def validate(reader: Reader, file: str):
             data = reader[file]
 
             validator = jsonschema.Draft202012Validator(schema, registry=registry)
@@ -263,7 +274,7 @@ def validate_metaschemas(
             for error in errors:
                 collector.handle(
                     InvalidMetaSchemaError(
-                        f"Invalid metaschema found when processing {file}. Error: {error.message}"
+                        f"File at {file} does not pass metaschema validation. Error: {error.message}"
                     )
                 )
 
