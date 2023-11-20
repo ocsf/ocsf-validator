@@ -1,4 +1,5 @@
 import pytest
+import referencing
 
 from ocsf_validator.errors import *
 from ocsf_validator.reader import DictReader
@@ -147,5 +148,51 @@ def test_validate_intra_type_collisions():
 
 
 def test_validate_metaschemas():
-    # TODO
-    pytest.fail()
+    # set up a json schema that expects an object with a name property only
+    json_schema = {
+        "$id": "https://schema.ocsf.io/object.schema.json",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Object",
+        "type": "object",
+        "required": [
+            "name"
+        ],
+        "properties": {
+            "name": {
+                "type": "string"
+            }
+        },
+        "additionalProperties": False
+    }
+
+    # set up a function to a create a registry in memory
+    def _get_registry(reader, base_uri):
+        registry = referencing.Registry()
+        resource = referencing.Resource.from_contents(json_schema)
+        registry = registry.with_resource(base_uri + "object.schema.json", resource=resource)
+        return registry
+
+    # test that a bad schema fails validation
+    r = DictReader()
+    r.set_data(
+        {
+            "/objects/thing.json": {
+                "notARealAttribute": "thing",
+            },
+        }
+    )
+
+    with pytest.raises(InvalidMetaSchemaError) as exc:
+        validate_metaschemas(r, get_registry=_get_registry)
+
+    # test that a good schema passes validation
+    r = DictReader()
+    r.set_data(
+        {
+            "/objects/thing.json": {
+                "name": "thing",
+            },
+        }
+    )
+
+    validate_metaschemas(r, get_registry=_get_registry)

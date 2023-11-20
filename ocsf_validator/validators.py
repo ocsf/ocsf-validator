@@ -2,7 +2,7 @@ import inspect
 import jsonschema
 import json
 import referencing
-from typing import (Dict, NotRequired, Optional, Required, get_type_hints,
+from typing import (Callable, Dict, NotRequired, Optional, Required, get_type_hints,
                     is_typeddict)
 
 from ocsf_validator.errors import (Collector, InvalidMetaSchemaError,
@@ -228,24 +228,26 @@ def validate_intra_type_collisions(
     reader.apply(validate, AnyMatcher([ObjectMatcher(), EventMatcher()]))
 
 
-def validate_metaschemas(
-    reader: Reader,
-    collector: Collector = Collector.default,
-    types: Optional[TypeMapping] = None,
-):
-    if types is None:
-        types = TypeMapping(reader)
-
-    base_uri = "https://schemas.ocsf.io/"
-    
+def _get_registry(reader: Reader, base_uri: str) -> referencing.Registry:
     registry = referencing.Registry()
     for schema_file_path in (reader.base_path / "metaschema").rglob("*.schema.json"):
         with open(schema_file_path, 'r') as file:
             schema = json.load(file)
             resource = referencing.Resource.from_contents(schema)
             registry = registry.with_resource(base_uri + schema_file_path.name, resource=resource)
-    
 
+
+def validate_metaschemas(
+    reader: Reader,
+    collector: Collector = Collector.default,
+    types: Optional[TypeMapping] = None,
+    get_registry: Callable[[Reader, str], referencing.Registry] = _get_registry
+):
+    if types is None:
+        types = TypeMapping(reader)
+
+    base_uri = "https://schemas.ocsf.io/"
+    registry = get_registry(reader, base_uri)
     matchers = {
         "object.schema.json": ObjectMatcher(),
         "event.schema.json": EventMatcher()
