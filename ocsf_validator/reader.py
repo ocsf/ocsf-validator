@@ -67,6 +67,10 @@ class Reader(ABC):
         self._data: SchemaData = {}
         self._root: str = ""
 
+    @property
+    def base_path(self):
+        return self._options.base_path
+
     def contents(self, path: Pathable) -> SchemaData:
         """Retrieve the parsed JSON data in a given file."""
         if isinstance(path, Path):

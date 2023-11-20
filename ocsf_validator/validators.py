@@ -1,4 +1,7 @@
 import inspect
+import jsonschema
+import json
+import referencing
 from typing import (Dict, NotRequired, Optional, Required, get_type_hints,
                     is_typeddict)
 
@@ -230,7 +233,36 @@ def validate_metaschemas(
     collector: Collector = Collector.default,
     types: Optional[TypeMapping] = None,
 ):
-    def validate(reader: Reader, file: str):
-        pass
+    if types is None:
+        types = TypeMapping(reader)
 
-    reader.apply(validate, AnyMatcher([ObjectMatcher(), EventMatcher()]))
+    base_uri = "https://schemas.ocsf.io/"
+    
+    registry = referencing.Registry()
+    for schema_file_path in (reader.base_path / "metaschema").rglob("*.schema.json"):
+        with open(schema_file_path, 'r') as file:
+            schema = json.load(file)
+            resource = referencing.Resource.from_contents(schema)
+            registry = registry.with_resource(base_uri + schema_file_path.name, resource=resource)
+    
+
+    matchers = {
+        "object.schema.json": ObjectMatcher(),
+        "event.schema.json": EventMatcher()
+    }
+
+    for metaschema, matcher in matchers.items():
+        def validate(reader: Reader, file: str):
+            schema = registry.resolver(base_uri).lookup(metaschema).contents
+            data = reader[file]
+
+            validator = jsonschema.Draft202012Validator(schema, registry=registry)
+            errors = sorted(validator.iter_errors(data), key=lambda e: e.path)
+            for error in errors:
+                collector.handle(
+                    InvalidMetaSchemaError(
+                        f"Invalid metaschema found when processing {file}. Error: {error.message}"
+                    )
+                )
+
+        reader.apply(validate, matcher)
