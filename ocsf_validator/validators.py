@@ -223,3 +223,14 @@ def validate_intra_type_collisions(
             found[t][name].append(file)
 
     reader.apply(validate, AnyMatcher([ObjectMatcher(), EventMatcher()]))
+
+
+def validate_metaschemas(
+    reader: Reader,
+    collector: Collector = Collector.default,
+    types: Optional[TypeMapping] = None,
+):
+    def validate(reader: Reader, file: str):
+        pass
+
+    reader.apply(validate, AnyMatcher([ObjectMatcher(), EventMatcher()]))

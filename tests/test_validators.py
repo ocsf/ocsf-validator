@@ -144,3 +144,8 @@ def test_validate_intra_type_collisions():
     r["/objects/thing2.json"] = {"name": "thing2"}
     # no error
     validate_intra_type_collisions(r)
+
+
+def test_validate_metaschemas():
+    # TODO
+    pytest.fail()
