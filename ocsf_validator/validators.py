@@ -1,10 +1,8 @@
-import inspect
 import jsonschema
 import json
 import referencing
 import referencing.exceptions
-from typing import (Callable, Dict, NotRequired, Optional, Required, get_type_hints,
-                    is_typeddict)
+from typing import Callable, Dict, Optional
 
 from ocsf_validator.errors import (Collector, InvalidMetaSchemaError,
                                    InvalidMetaSchemaFileError,
@@ -12,11 +10,12 @@ from ocsf_validator.errors import (Collector, InvalidMetaSchemaError,
                                    TypeNameCollisionError,
                                    UndefinedAttributeError,
                                    UndetectableTypeError, UnknownKeyError,
-                                   UnusedAttributeError)
+                                   UnusedAttributeError, InvalidAttributeTypeError)
 from ocsf_validator.matchers import (AnyMatcher, DictionaryMatcher,
-                                     EventMatcher, ExtensionMatcher,
+                                     EventMatcher,
                                      IncludeMatcher, ObjectMatcher,
                                      ProfileMatcher)
+
 from ocsf_validator.processor import process_includes
 from ocsf_validator.reader import Reader
 from ocsf_validator.type_mapping import TypeMapping
@@ -280,3 +279,61 @@ def validate_metaschemas(
                 )
 
         reader.apply(validate, matcher)
+
+def validate_attr_types(
+    reader: Reader,
+    collector: Collector = Collector.default,
+    types: Optional[TypeMapping] = None,
+) -> None:
+
+    if types is None:
+        types = TypeMapping(reader)
+
+    EXCLUDE = ["$include"]
+
+    dicts = []
+    for d in reader.match(DictionaryMatcher()):
+        dicts.append(reader[d])
+
+    if len(dicts) == 0:
+        collector.handle(InvalidMetaSchemaError())
+
+    ## Build a list of object names
+    def names(reader: Reader, file: str, accum: list[str]) -> list[str]:
+        if "name" in reader[file]:
+            accum.append(reader[file]["name"])
+
+        return accum
+
+    objects: list[str] = []
+    reader.map(names, ObjectMatcher(), objects)
+
+
+    # Validation for each file
+    def validate(reader: Reader, file: str):
+        record = reader[file]
+        if ATTRIBUTES_KEY in record:
+            for k in record[ATTRIBUTES_KEY]:
+                if k not in EXCLUDE:
+                    attr = record[ATTRIBUTES_KEY][k]
+                    if "type" in attr:
+                        found = False
+
+                        if attr["type"][-2:] == "_t":
+                            # Scalar type; check dictionaries.
+                            for d in dicts:
+                                if "types" in d and attr["type"] in d["types"][ATTRIBUTES_KEY]:
+                                    found = True
+                        else:
+                            # Object type; check objects in repository.
+                            found = attr["type"] in objects
+
+                        if found is False:
+                            collector.handle(InvalidAttributeTypeError(attr["type"], k, file))
+
+    reader.apply(
+        validate,
+        AnyMatcher(
+            [ObjectMatcher(), EventMatcher(), ProfileMatcher(), IncludeMatcher()]
+        ),
+    )

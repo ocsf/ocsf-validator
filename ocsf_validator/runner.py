@@ -20,7 +20,8 @@ from ocsf_validator.validators import (validate_include_targets,
                                        validate_no_unknown_keys,
                                        validate_required_keys,
                                        validate_undefined_attrs,
-                                       validate_unused_attrs)
+                                       validate_unused_attrs,
+                                       validate_attr_types)
 
 
 class Severity(IntEnum):
@@ -94,6 +95,9 @@ class ValidatorOptions:
     invalid_metaschema_file: int = Severity.ERROR
     """A JSON schema metaschema file is missing or invalid."""
 
+    invalid_attr_types: int = Severity.ERROR
+    """Attribute type is invalid."""
+
     def severity(self, err: Exception):
         match type(err):
             case errors.MissingRequiredKeyError:
@@ -128,6 +132,8 @@ class ValidatorOptions:
                 return self.undefined_attribute
             case errors.InvalidMetaSchemaFileError:
                 return self.invalid_metaschema_file
+            case errors.InvalidAttributeTypeError:
+                return self.invalid_attr_types
             case _:
                 return Severity.INFO
 
@@ -278,6 +284,13 @@ class ValidationRunner:
             test(
                 "Names are not used multiple times within a record type",
                 lambda: validate_intra_type_collisions(
+                    reader, collector=collector, types=types
+                ),
+            )
+
+            test(
+                "Attribute type references are defined",
+                lambda: validate_attr_types(
                     reader, collector=collector, types=types
                 ),
             )

@@ -219,3 +219,7 @@ class UndefinedAttributeError(ValidationError):
         super().__init__(
             f"Attribute `{attr}` in {file} is not defined in any attribute"
         )
+
+class InvalidAttributeTypeError(ValidationError):
+    def __init__(self, ref: str, attr: str, file: str):
+        super().__init__(f"Invalid type {ref} for {attr} in {file}")
