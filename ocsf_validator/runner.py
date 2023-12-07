@@ -16,6 +16,7 @@ from ocsf_validator.reader import FileReader, ReaderOptions
 from ocsf_validator.type_mapping import TypeMapping
 from ocsf_validator.validators import (validate_include_targets,
                                        validate_intra_type_collisions,
+                                       validate_metaschemas,
                                        validate_no_unknown_keys,
                                        validate_required_keys,
                                        validate_undefined_attrs,
@@ -90,6 +91,9 @@ class ValidatorOptions:
     undefined_attribute: int = Severity.WARN
     """Attributes used in a record but not defined in `dictionary.json`."""
 
+    invalid_metaschema_file: int = Severity.ERROR
+    """A JSON schema metaschema file is missing or invalid."""
+
     def severity(self, err: Exception):
         match type(err):
             case errors.MissingRequiredKeyError:
@@ -122,6 +126,8 @@ class ValidatorOptions:
                 return self.intra_type_name_collision
             case errors.UndefinedAttributeError:
                 return self.undefined_attribute
+            case errors.InvalidMetaSchemaFileError:
+                return self.invalid_metaschema_file
             case _:
                 return Severity.INFO
 
@@ -272,6 +278,13 @@ class ValidationRunner:
             test(
                 "Names are not used multiple times within a record type",
                 lambda: validate_intra_type_collisions(
+                    reader, collector=collector, types=types
+                ),
+            )
+
+            test(
+                "JSON files match their metaschema definitions",
+                lambda: validate_metaschemas(
                     reader, collector=collector, types=types
                 ),
             )

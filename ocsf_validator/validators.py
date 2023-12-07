@@ -1,8 +1,13 @@
 import inspect
-from typing import (Dict, NotRequired, Optional, Required, get_type_hints,
+import jsonschema
+import json
+import referencing
+import referencing.exceptions
+from typing import (Callable, Dict, NotRequired, Optional, Required, get_type_hints,
                     is_typeddict)
 
 from ocsf_validator.errors import (Collector, InvalidMetaSchemaError,
+                                   InvalidMetaSchemaFileError,
                                    MissingRequiredKeyError,
                                    TypeNameCollisionError,
                                    UndefinedAttributeError,
@@ -223,3 +228,55 @@ def validate_intra_type_collisions(
             found[t][name].append(file)
 
     reader.apply(validate, AnyMatcher([ObjectMatcher(), EventMatcher()]))
+
+
+def _default_get_registry(reader: Reader, base_uri: str) -> referencing.Registry:
+    registry = referencing.Registry()
+    for schema_file_path in (reader.base_path / "metaschema").rglob("*.schema.json"):
+        with open(schema_file_path, 'r') as file:
+            schema = json.load(file)
+            resource = referencing.Resource.from_contents(schema)
+            registry = registry.with_resource(base_uri + schema_file_path.name, resource=resource)
+    return registry
+
+
+def validate_metaschemas(
+    reader: Reader,
+    collector: Collector = Collector.default,
+    types: Optional[TypeMapping] = None,
+    get_registry: Callable[[Reader, str], referencing.Registry] = _default_get_registry
+):
+    if types is None:
+        types = TypeMapping(reader)
+
+    base_uri = "https://schemas.ocsf.io/"
+    registry = get_registry(reader, base_uri)
+    matchers = {
+        "object.schema.json": ObjectMatcher(),
+        "event.schema.json": EventMatcher()
+    }
+
+    for metaschema, matcher in matchers.items():
+        try:
+            schema = registry.resolver(base_uri).lookup(metaschema).contents
+        except referencing.exceptions.Unresolvable as exc:
+            collector.handle(
+                InvalidMetaSchemaFileError(
+                    f"The metaschema file for {metaschema} is invalid or missing. Error: {type(exc).__name__}"
+                )
+            )
+            continue
+            
+        def validate(reader: Reader, file: str):
+            data = reader[file]
+
+            validator = jsonschema.Draft202012Validator(schema, registry=registry)
+            errors = sorted(validator.iter_errors(data), key=lambda e: e.path)
+            for error in errors:
+                collector.handle(
+                    InvalidMetaSchemaError(
+                        f"File at {file} does not pass metaschema validation. Error: {error.message}"
+                    )
+                )
+
+        reader.apply(validate, matcher)
