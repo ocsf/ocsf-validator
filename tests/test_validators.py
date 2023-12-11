@@ -146,6 +146,39 @@ def test_validate_intra_type_collisions():
     # no error
     validate_intra_type_collisions(r)
 
+def test_validate_attr_keys():
+    r = DictReader()
+    r.set_data(
+        {
+            "/objects/thing.json": {
+                "name": "thing",
+                "attributes": {
+                    "one": {"name": "one", "type": "string_t"},
+                    "two": {"name": "two", "type": "thing2"},
+                },
+            },
+            "/objects/thing2.json": {
+                "name": "thing2",
+                "attributes": {},
+            },
+            "/objects/dictionary.json": {
+                "types": {
+                    "attributes": {
+                        "string_t": {},
+                    },
+                },
+            },
+        }
+    )
+
+    # raise no errors
+    validate_attr_types(r)
+
+    r["/objects/thing2.json"]["name"] = "thing3"
+    with pytest.raises(InvalidAttributeTypeError) as exc:
+        validate_attr_types(r)
+
+
 
 def test_validate_metaschemas():
     # set up a json schema that expects an object with a name property only
