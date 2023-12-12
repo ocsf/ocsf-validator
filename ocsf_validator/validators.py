@@ -283,7 +283,8 @@ def validate_metaschemas(
             for error in errors:
                 collector.handle(
                     InvalidMetaSchemaError(
-                        f"File at {file} does not pass metaschema validation. Error: {error.message}"
+                        f"File at {file} does not pass metaschema validation. "
+                        f"Error: {error.message} at JSON path: '{error.json_path}'"
                     )
                 )
 
