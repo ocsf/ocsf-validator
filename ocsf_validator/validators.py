@@ -11,9 +11,13 @@ from ocsf_validator.errors import (Collector, InvalidMetaSchemaError,
                                    UndefinedAttributeError,
                                    UndetectableTypeError, UnknownKeyError,
                                    UnusedAttributeError, InvalidAttributeTypeError)
-from ocsf_validator.matchers import (AnyMatcher, DictionaryMatcher,
+from ocsf_validator.matchers import (AnyMatcher, 
+                                     CategoriesMatcher,
+                                     DictionaryMatcher,
                                      EventMatcher,
-                                     IncludeMatcher, ObjectMatcher,
+                                     ExtensionMatcher,
+                                     IncludeMatcher, 
+                                     ObjectMatcher,
                                      ProfileMatcher)
 
 from ocsf_validator.processor import process_includes
@@ -251,8 +255,13 @@ def validate_metaschemas(
     base_uri = "https://schemas.ocsf.io/"
     registry = get_registry(reader, base_uri)
     matchers = {
+        "event.schema.json": EventMatcher(),
+        "include.schema.json": IncludeMatcher(),
         "object.schema.json": ObjectMatcher(),
-        "event.schema.json": EventMatcher()
+        "profile.schema.json": ProfileMatcher(),
+        "categories.schema.json": CategoriesMatcher(),
+        "dictionary.schema.json": DictionaryMatcher(),
+        "extension.schema.json": ExtensionMatcher(),
     }
 
     for metaschema, matcher in matchers.items():
