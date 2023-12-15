@@ -2,6 +2,7 @@ import jsonschema
 import json
 import referencing
 import referencing.exceptions
+from pathlib import Path
 from typing import Callable, Dict, Optional
 
 from ocsf_validator.errors import (Collector, InvalidMetaSchemaError,
@@ -11,9 +12,13 @@ from ocsf_validator.errors import (Collector, InvalidMetaSchemaError,
                                    UndefinedAttributeError,
                                    UndetectableTypeError, UnknownKeyError,
                                    UnusedAttributeError, InvalidAttributeTypeError)
-from ocsf_validator.matchers import (AnyMatcher, DictionaryMatcher,
+from ocsf_validator.matchers import (AnyMatcher, 
+                                     CategoriesMatcher,
+                                     DictionaryMatcher,
                                      EventMatcher,
-                                     IncludeMatcher, ObjectMatcher,
+                                     ExtensionMatcher,
+                                     IncludeMatcher, 
+                                     ObjectMatcher,
                                      ProfileMatcher)
 
 from ocsf_validator.processor import process_includes
@@ -244,15 +249,20 @@ def validate_metaschemas(
     collector: Collector = Collector.default,
     types: Optional[TypeMapping] = None,
     get_registry: Callable[[Reader, str], referencing.Registry] = _default_get_registry
-):
+) -> None:
     if types is None:
         types = TypeMapping(reader)
 
     base_uri = "https://schemas.ocsf.io/"
     registry = get_registry(reader, base_uri)
     matchers = {
+        "event.schema.json": EventMatcher(),
+        "include.schema.json": IncludeMatcher(),
         "object.schema.json": ObjectMatcher(),
-        "event.schema.json": EventMatcher()
+        "profile.schema.json": ProfileMatcher(),
+        "categories.schema.json": CategoriesMatcher(),
+        "dictionary.schema.json": DictionaryMatcher(),
+        "extension.schema.json": ExtensionMatcher(),
     }
 
     for metaschema, matcher in matchers.items():
@@ -266,15 +276,16 @@ def validate_metaschemas(
             )
             continue
             
-        def validate(reader: Reader, file: str):
-            data = reader[file]
-
+        def validate(reader: Reader, file: str) -> None:
+            with open(Path(reader.base_path, file), "r") as f:
+                data = json.load(f)
             validator = jsonschema.Draft202012Validator(schema, registry=registry)
             errors = sorted(validator.iter_errors(data), key=lambda e: e.path)
             for error in errors:
                 collector.handle(
                     InvalidMetaSchemaError(
-                        f"File at {file} does not pass metaschema validation. Error: {error.message}"
+                        f"File at {file} does not pass metaschema validation. "
+                        f"Error: {error.message} at JSON path: '{error.json_path}'"
                     )
                 )
 
