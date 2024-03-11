@@ -1,26 +1,35 @@
-import jsonschema
 import json
+from pathlib import Path, PurePath
+from typing import Callable
+
+import jsonschema
 import referencing
 import referencing.exceptions
-from pathlib import Path
-from typing import Callable, Dict, Optional
 
-from ocsf_validator.errors import (Collector, InvalidMetaSchemaError,
-                                   InvalidMetaSchemaFileError,
-                                   MissingRequiredKeyError,
-                                   TypeNameCollisionError,
-                                   UndefinedAttributeError,
-                                   UndetectableTypeError, UnknownKeyError,
-                                   UnusedAttributeError, InvalidAttributeTypeError)
-from ocsf_validator.matchers import (AnyMatcher, 
-                                     CategoriesMatcher,
-                                     DictionaryMatcher,
-                                     EventMatcher,
-                                     ExtensionMatcher,
-                                     IncludeMatcher, 
-                                     ObjectMatcher,
-                                     ProfileMatcher)
-
+from ocsf_validator.errors import (
+    Collector,
+    IllegalObservableTypeIDError,
+    InvalidAttributeTypeError,
+    InvalidMetaSchemaError,
+    InvalidMetaSchemaFileError,
+    MissingRequiredKeyError,
+    ObservableTypeIDCollisionError,
+    TypeNameCollisionError,
+    UndefinedAttributeError,
+    UndetectableTypeError,
+    UnknownKeyError,
+    UnusedAttributeError,
+)
+from ocsf_validator.matchers import (
+    AnyMatcher,
+    CategoriesMatcher,
+    DictionaryMatcher,
+    EventMatcher,
+    ExtensionMatcher,
+    IncludeMatcher,
+    ObjectMatcher,
+    ProfileMatcher,
+)
 from ocsf_validator.processor import process_includes
 from ocsf_validator.reader import Reader
 from ocsf_validator.type_mapping import TypeMapping
@@ -237,10 +246,12 @@ def validate_intra_type_collisions(
 def _default_get_registry(reader: Reader, base_uri: str) -> referencing.Registry:
     registry = referencing.Registry()
     for schema_file_path in (reader.base_path / "metaschema").rglob("*.schema.json"):
-        with open(schema_file_path, 'r') as file:
+        with open(schema_file_path, "r") as file:
             schema = json.load(file)
             resource = referencing.Resource.from_contents(schema)
-            registry = registry.with_resource(base_uri + schema_file_path.name, resource=resource)
+            registry = registry.with_resource(
+                base_uri + schema_file_path.name, resource=resource
+            )
     return registry
 
 
@@ -248,7 +259,7 @@ def validate_metaschemas(
     reader: Reader,
     collector: Collector = Collector.default,
     types: Optional[TypeMapping] = None,
-    get_registry: Callable[[Reader, str], referencing.Registry] = _default_get_registry
+    get_registry: Callable[[Reader, str], referencing.Registry] = _default_get_registry,
 ) -> None:
     if types is None:
         types = TypeMapping(reader)
@@ -275,7 +286,7 @@ def validate_metaschemas(
                 )
             )
             continue
-            
+
         def validate(reader: Reader, file: str) -> None:
             with open(Path(reader.base_path, file), "r") as f:
                 data = json.load(f)
@@ -291,12 +302,12 @@ def validate_metaschemas(
 
         reader.apply(validate, matcher)
 
+
 def validate_attr_types(
     reader: Reader,
     collector: Collector = Collector.default,
     types: Optional[TypeMapping] = None,
 ) -> None:
-
     if types is None:
         types = TypeMapping(reader)
 
@@ -319,7 +330,6 @@ def validate_attr_types(
     objects: list[str] = []
     reader.map(names, ObjectMatcher(), objects)
 
-
     # Validation for each file
     def validate(reader: Reader, file: str):
         record = reader[file]
@@ -333,14 +343,19 @@ def validate_attr_types(
                         if attr["type"][-2:] == "_t":
                             # Scalar type; check dictionaries.
                             for d in dicts:
-                                if "types" in d and attr["type"] in d["types"][ATTRIBUTES_KEY]:
+                                if (
+                                    TYPES_KEY in d
+                                    and attr["type"] in d[TYPES_KEY][ATTRIBUTES_KEY]
+                                ):
                                     found = True
                         else:
                             # Object type; check objects in repository.
                             found = attr["type"] in objects
 
                         if found is False:
-                            collector.handle(InvalidAttributeTypeError(attr["type"], k, file))
+                            collector.handle(
+                                InvalidAttributeTypeError(attr["type"], k, file)
+                            )
 
     reader.apply(
         validate,
@@ -348,3 +363,106 @@ def validate_attr_types(
             [ObjectMatcher(), EventMatcher(), ProfileMatcher(), IncludeMatcher()]
         ),
     )
+
+
+def validate_observables(
+    reader: Reader,
+    collector: Collector = Collector.default,
+    types: Optional[TypeMapping] = None,
+) -> str:
+    """
+    Validate defined observable type_id values:
+        * Ensure there are no collisions.
+        * Ensure no definitions in "hidden" (intermediate) classes and objects.
+
+    NOTE: This must be called _before_ merging extends to avoid incorrectly detecting collisions between
+          parent and child classes and objects -- specifically before runner.process_includes.
+    """
+    # Map of observables type_ids to list of definitions
+    observables: Dict[int, list[str]] = {}
+
+    def check_collision(type_id, name, file):
+        if type_id in observables:
+            definitions = observables[type_id]
+            collector.handle(
+                ObservableTypeIDCollisionError(type_id, name, definitions, file)
+            )
+            definitions.append(name)
+        else:
+            observables[type_id] = [name]
+
+    def check_item_maybe_observable(item, kind, file):
+        if OBSERVABLE_KEY in item:
+            type_id = item[OBSERVABLE_KEY]
+            name = f"{item.get('caption')} ({kind})"
+            check_collision(type_id, name, file)
+
+    def validate_dictionaries(reader: Reader, file: str):
+        if TYPES_KEY in reader[file] and ATTRIBUTES_KEY in reader[file][TYPES_KEY]:
+            for t_key in reader[file][TYPES_KEY][ATTRIBUTES_KEY]:
+                check_item_maybe_observable(
+                    reader[file][TYPES_KEY][ATTRIBUTES_KEY][t_key],
+                    "Dictionary Type",
+                    file,
+                )
+
+        if ATTRIBUTES_KEY in reader[file]:
+            for a_key in reader[file][ATTRIBUTES_KEY]:
+                check_item_maybe_observable(
+                    reader[file][ATTRIBUTES_KEY][a_key], "Dictionary Attribute", file
+                )
+
+    def validate_objects(reader: Reader, file: str):
+        # Only check for illegal definition in objects with "name"
+        # (ignore weird objects with no name that do some kind of reverse inheritance)
+        # and
+        if (
+            "name" in reader[file]
+            and PurePath(file).name.startswith("_")
+            and OBSERVABLE_KEY in reader[file]
+        ):
+            cause = (
+                f'Illegal "{OBSERVABLE_KEY}" definition in hidden object, file "{file}":'
+                f" defining observable in a hidden object (name with leading underscore)"
+                f" causes collisions in child objects"
+            )
+            collector.handle(IllegalObservableTypeIDError(cause))
+
+        # Check for collisions in all objects
+        check_item_maybe_observable(reader[file], "Object", file)
+
+    def validate_classes(reader: Reader, file: str):
+        # Only check for illegal definition in classes with "name"
+        # (ignore weird classes with no name that do some kind of reverse inheritance)
+        if (
+            "name" in reader[file]
+            and "base_event" != reader[file].get("name")
+            and "uid" not in reader[file]
+            and OBSERVABLES_KEY in reader[file]
+        ):
+            cause = (
+                f'Illegal "{OBSERVABLES_KEY}" definition in hidden class, file "{file}":'
+                f' defining observables in a hidden class (classes other than "base_event" without a "uid")'
+                f" causes collisions in child classes"
+            )
+            collector.handle(IllegalObservableTypeIDError(cause))
+
+        # Check for collisions in all classes
+        if OBSERVABLES_KEY in reader[file]:
+            for attribute_path in reader[file][OBSERVABLES_KEY]:
+                type_id = reader[file][OBSERVABLES_KEY][attribute_path]
+                name = f"{reader[file]['caption']} Class: {attribute_path} (Class-Specific)"
+                check_collision(type_id, name, file)
+
+    reader.apply(validate_dictionaries, DictionaryMatcher())
+    reader.apply(validate_objects, ObjectMatcher())
+    reader.apply(validate_classes, EventMatcher())
+
+    strs = ["   Observables:"]
+    type_ids = sorted(observables.keys())
+    for tid in type_ids:
+        collision = ""
+        if len(observables[tid]) > 1:
+            collision = "💥COLLISION💥 "
+        strs.append(f"   {tid:6} →️ {collision}{", ".join(observables[tid])}")
+    return "\n".join(strs)

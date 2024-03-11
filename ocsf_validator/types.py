@@ -1,11 +1,22 @@
-from dataclasses import dataclass, field
-from typing import (Any, Dict, NotRequired, Optional, Required, Sequence,
-                    TypedDict, TypeVar, Union)
+from typing import (
+    Any,
+    Dict,
+    NotRequired,
+    Optional,
+    Required,
+    Sequence,
+    TypedDict,
+    TypeVar,
+    Union,
+)
 
 ATTRIBUTES_KEY = "attributes"
 PROFILES_KEY = "profiles"
 EXTENDS_KEY = "extends"
 INCLUDE_KEY = "$include"
+OBSERVABLE_KEY = "observable"
+OBSERVABLES_KEY = "observables"
+TYPES_KEY = "types"
 
 
 class OcsfVersion(TypedDict):
@@ -82,7 +93,7 @@ class OcsfCategory(TypedDict):
     caption: str
     description: str
     uid: int
-    type: NotRequired[str] # older categories.json definitions
+    type: NotRequired[str]  # older categories.json definitions
 
 
 class OcsfCategories(TypedDict):
@@ -139,6 +150,7 @@ OcsfEvent = TypedDict(
         "profiles": NotRequired[Sequence[str]],
         "associations": NotRequired[Dict[str, Sequence[str]]],
         "constraints": NotRequired[Dict[str, Sequence[str]]],
+        "observables": NotRequired[Dict[str, int]],
         "$include": NotRequired[Union[str, Sequence[str]]],
         "@deprecated": NotRequired[OcsfDeprecationInfo],
     },
