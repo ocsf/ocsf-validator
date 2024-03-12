@@ -464,5 +464,5 @@ def validate_observables(
         collision = ""
         if len(observables[tid]) > 1:
             collision = "💥COLLISION💥 "
-        strs.append(f"   {tid:6} →️ {collision}{", ".join(observables[tid])}")
+        strs.append(f'   {tid:6} →️ {collision}{", ".join(observables[tid])}')
     return "\n".join(strs)
