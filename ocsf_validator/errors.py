@@ -59,8 +59,10 @@ class InvalidBasePathError(ValidationError):
 class InvalidMetaSchemaError(ValidationError):
     ...
 
+
 class InvalidMetaSchemaFileError(ValidationError):
     ...
+
 
 class UnusedAttributeError(ValidationError):
     def __init__(self, attr: str):
@@ -220,6 +222,20 @@ class UndefinedAttributeError(ValidationError):
             f"Attribute `{attr}` in {file} is not defined in any attribute"
         )
 
+
 class InvalidAttributeTypeError(ValidationError):
     def __init__(self, ref: str, attr: str, file: str):
         super().__init__(f"Invalid type {ref} for {attr} in {file}")
+
+
+class IllegalObservableTypeIDError(ValidationError):
+    def __init__(self, cause: str):
+        super().__init__(cause)
+
+
+class ObservableTypeIDCollisionError(ValidationError):
+    def __init__(self, type_id: int, this_def: str, other_defs: list[str], file: str):
+        super().__init__(
+            f"Collision with observable type_id {type_id} between {this_def}"
+            f" in file {file} and {', '.join(other_defs)}"
+        )

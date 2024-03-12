@@ -1,15 +1,15 @@
 [tool.poetry]
 name = "ocsf-validator"
-version = "0.1.4"
+version = "0.1.5"
 description = "OCSF Schema Validation"
 authors = ["Jeremy Fisher <jeremy@query.ai>", "Alan Pinkert <apinkert@cisco.com>"]
 readme = "README.md"
 packages = [{include = "ocsf_validator"}]
 
 [tool.poetry.dependencies]
-jsonschema = "^4.20.0"
+jsonschema = "^4.21.1"
 python = "^3.11"
-termcolor = "^2.3.0"
+termcolor = "^2.4.0"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.12.0"

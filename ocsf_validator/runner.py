@@ -6,7 +6,7 @@ import traceback
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 
 from termcolor import colored
 
@@ -14,14 +14,17 @@ import ocsf_validator.errors as errors
 from ocsf_validator.processor import process_includes
 from ocsf_validator.reader import FileReader, ReaderOptions
 from ocsf_validator.type_mapping import TypeMapping
-from ocsf_validator.validators import (validate_include_targets,
-                                       validate_intra_type_collisions,
-                                       validate_metaschemas,
-                                       validate_no_unknown_keys,
-                                       validate_required_keys,
-                                       validate_undefined_attrs,
-                                       validate_unused_attrs,
-                                       validate_attr_types)
+from ocsf_validator.validators import (
+    validate_attr_types,
+    validate_include_targets,
+    validate_intra_type_collisions,
+    validate_metaschemas,
+    validate_no_unknown_keys,
+    validate_observables,
+    validate_required_keys,
+    validate_undefined_attrs,
+    validate_unused_attrs,
+)
 
 
 class Severity(IntEnum):
@@ -98,6 +101,12 @@ class ValidatorOptions:
     invalid_attr_types: int = Severity.ERROR
     """Attribute type is invalid."""
 
+    illegal_observable: int = Severity.ERROR
+    """Observable type_id illegally defined."""
+
+    observable_collision: int = Severity.ERROR
+    """Colliding observable type_id defined."""
+
     def severity(self, err: Exception):
         match type(err):
             case errors.MissingRequiredKeyError:
@@ -134,6 +143,10 @@ class ValidatorOptions:
                 return self.invalid_metaschema_file
             case errors.InvalidAttributeTypeError:
                 return self.invalid_attr_types
+            case errors.IllegalObservableTypeIDError:
+                return self.illegal_observable
+            case errors.ObservableTypeIDCollisionError:
+                return self.observable_collision
             case _:
                 return Severity.INFO
 
@@ -187,9 +200,8 @@ class ValidationRunner:
         collector = errors.Collector(throw=False)
 
         def test(label: str, code: Callable):
-            message: str = ""
             failures: int = 0
-            code()
+            message = code()
 
             if label not in messages:
                 messages[label] = {}
@@ -214,6 +226,9 @@ class ValidationRunner:
             if failures == 0:
                 print("  ", self.txt_pass("PASS") + ":", "No problems identified.")
             collector.flush()
+
+            if message:
+                print(message)
 
         try:
             print(self.txt_emphasize("===[ OCSF Schema Validator ]==="))
@@ -240,6 +255,11 @@ class ValidationRunner:
 
             types = TypeMapping(reader, collector)
             test("Schema types can be inferred", lambda: None)
+
+            test(
+                "Check observable type_id definitions",
+                lambda: validate_observables(reader, collector=collector, types=types),
+            )
 
             # Validate dependencies
             test(
@@ -290,16 +310,12 @@ class ValidationRunner:
 
             test(
                 "Attribute type references are defined",
-                lambda: validate_attr_types(
-                    reader, collector=collector, types=types
-                ),
+                lambda: validate_attr_types(reader, collector=collector, types=types),
             )
 
             test(
                 "JSON files match their metaschema definitions",
-                lambda: validate_metaschemas(
-                    reader, collector=collector, types=types
-                ),
+                lambda: validate_metaschemas(reader, collector=collector, types=types),
             )
 
         except Exception as err:

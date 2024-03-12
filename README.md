@@ -90,4 +90,3 @@ If you're adding a validator, do the following:
  - Add any custom errors in `errors.py`.
  - Create an option to change its severity level in `ValidatorOptions` and map it in the constructor of `ValidationRunner` in `runner.py`.
  - Invoke the new validator in `ValidationRunner.validate`.
-
