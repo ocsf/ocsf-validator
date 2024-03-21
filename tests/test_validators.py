@@ -1,7 +1,5 @@
 import pytest
-import referencing
 
-from ocsf_validator.errors import *
 from ocsf_validator.reader import DictReader
 from ocsf_validator.validators import *
 
@@ -146,6 +144,7 @@ def test_validate_intra_type_collisions():
     # no error
     validate_intra_type_collisions(r)
 
+
 def test_validate_attr_keys():
     r = DictReader()
     r.set_data(
@@ -175,9 +174,160 @@ def test_validate_attr_keys():
     validate_attr_types(r)
 
     r["/objects/thing2.json"]["name"] = "thing3"
-    with pytest.raises(InvalidAttributeTypeError) as exc:
+    with pytest.raises(InvalidAttributeTypeError):
         validate_attr_types(r)
 
+
+def test_validate_observables():
+    good_data = {
+        "dictionary.json": {
+            "attributes": {
+                "name": {"caption": "Name", "type": "string_t"},
+                "alpha": {"caption": "Alpha", "type": "string_t"},
+                "beta": {"caption": "Beta", "type": "string_t"},
+                "gamma": {"caption": "Gamma", "type": "gamma_t", "observable": 1},
+                "delta": {"caption": "Delta", "type": "delta_t"},
+            },
+            "types": {
+                "attributes": {
+                    "string_t": {"caption": "String"},
+                    "integer_t": {"caption": "Integer"},
+                    "gamma_t": {"caption": "Gamma_T", "type": "string_t", "type_name": "String"},
+                    "delta_t": {"caption": "Delta_T", "type": "integer_t", "type_name": "Integer", "observable": 2},
+                },
+            }
+        },
+
+        "/objects/bird.json": {
+            "name": "bird",
+            "caption": "Bird",
+            "attributes": {
+                "name": {"requirement": "required"},
+                "alpha": {"requirement": "required"},
+            }
+        },
+        "/objects/cat.json": {
+            "name": "cat",
+            "caption": "Cat",
+            "observable": 10,
+            "attributes": {
+                "name": {"requirement": "required"},
+                "alpha": {"requirement": "required"}
+            }
+        },
+        "/objects/dog.json": {
+            "name": "dog",
+            "caption": "Dog",
+            "attributes": {
+                "name": {"requirement": "required"},
+                "alpha": {"requirement": "required", "observable": 11},
+            }
+        },
+        "/objects/dog_house.json": {
+            "name": "dog_house",
+            "caption": "Dog House",
+            "attributes": {
+                "tenant": {"type": "dog", "requirement": "required"}
+            },
+            "observables": {
+                "dog.name": 12
+            }
+        },
+
+        "/events/blue.json": {
+            "uid": 1,
+            "name": "blue",
+            "caption": "Blue",
+        },
+        "/events/green.json": {
+            "uid": 2,
+            "name": "green",
+            "caption": "Green",
+            "observable": 100,
+        },
+        "/events/red.json": {
+            "uid": 3,
+            "name": "red",
+            "caption": "Red",
+            "attributes": {
+                "beta": {"requirement": "required", "observable": 101}
+            }
+        },
+        "/events/yellow.json": {
+            "uid": 4,
+            "name": "yellow",
+            "caption": "Yellow",
+            "attributes": {
+                "bird": {"requirement": "required"}
+            },
+            "observables": {
+                "bird.name": 102
+            }
+        },
+    }
+
+    observables = validate_and_get_observables(DictReader(good_data))
+    assert observables is not None
+    assert len(observables) == 7
+    print("\ntest_validate_observables - collected observables:")
+    print(observables_to_string(observables))
+
+    with pytest.raises(IllegalObservableTypeIDError):
+        bad_data = dict(good_data)
+        bad_data["/objects/_hidden.json"] = {"name": "_hidden", "caption": "Hidden", "observable": 1}
+        validate_observables(DictReader(bad_data))
+
+    with pytest.raises(IllegalObservableTypeIDError):
+        bad_data = dict(good_data)
+        bad_data["/objects/_hidden.json"] = {
+            "name": "_hidden",
+            "caption": "Hidden",
+            "attributes": {
+                "beta": {"requirement": "required", "observable": 1}
+            }
+        }
+        validate_observables(DictReader(bad_data))
+
+    with pytest.raises(IllegalObservableTypeIDError):
+        bad_data = dict(good_data)
+        bad_data["/events/_hidden.json"] = {
+            "name": "hidden",
+            "caption": "Hidden",
+            "attributes": {
+                "beta": {"requirement": "required", "observable": 1}
+            }
+        }
+        validate_observables(DictReader(bad_data))
+
+    with pytest.raises(ObservableTypeIDCollisionError):
+        bad_data = dict(good_data)
+        dictionary_attributes = bad_data["dictionary.json"]["attributes"]
+        dictionary_attributes["epsilon"] = {"caption": "Epsilon", "type": "string_t", "observable": 1}
+        validate_observables(DictReader(bad_data))
+
+    with pytest.raises(ObservableTypeIDCollisionError):
+        bad_data = dict(good_data)
+        dictionary_types_attributes = bad_data["dictionary.json"]["types"]["attributes"]
+        dictionary_types_attributes["epsilon_t"] = {
+            "caption": "Epsilon_T", "type": "string_t", "type_name": "String", "observable": 2
+        },
+        validate_observables(DictReader(bad_data))
+
+
+def test_validate_event_categories():
+    good_data = {
+        "categories.json": {
+            "attributes": {
+                "alpha": {"caption": "Alpha", "uid": 1},
+                "beta": {"caption": "Beta", "uid": 2},
+            }
+        },
+        "events/foo.json": {"caption": "Foo", "category": "alpha"},
+        "events/bar.json": {"caption": "Bar", "category": "beta"},
+        "events/baz.json": {"caption": "Baz", "category": "other"},
+        "events/guux.json": {"caption": "Quux"},
+    }
+    validate_event_categories(DictReader(good_data))
 
 
 def test_validate_metaschemas():
