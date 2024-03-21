@@ -294,7 +294,8 @@ def validate_metaschemas(
         except referencing.exceptions.Unresolvable as exc:
             collector.handle(
                 InvalidMetaSchemaFileError(
-                    f"The metaschema file for {metaschema} is invalid or missing. Error: {type(exc).__name__}"
+                    f"The metaschema file for {metaschema} is invalid or missing."
+                    f" Error: {type(exc).__name__}"
                 )
             )
             continue
@@ -387,8 +388,9 @@ def validate_observables(
         * Ensure there are no collisions.
         * Ensure no definitions in "hidden" (intermediate) classes and objects.
 
-    NOTE: This must be called _before_ merging extends to avoid incorrectly detecting collisions between
-          parent and child classes and objects -- specifically before runner.process_includes.
+    NOTE: This must be called _before_ merging extends to avoid incorrectly detecting
+          collisions between parent and child classes and objects -- specifically
+          before runner.process_includes.
     """
     observables = validate_and_get_observables(reader, collector)
     return observables_to_string(observables)
@@ -397,7 +399,8 @@ def validate_observables(
 # Factored out to a function for unit testing
 def observables_to_string(observables: Dict[Any, List[str]]) -> str:
     strs = ["   Observables:"]
-    # Supplying key function is needed for when type_ids are incorrectly defined as something other than ints
+    # Supplying key function is needed for when type_ids are incorrectly defined as
+    # something other than ints
     type_ids = sorted(observables.keys(), key=_lenient_to_int)
     for tid in type_ids:
         collision = ""
@@ -415,11 +418,11 @@ def _lenient_to_int(value) -> int:
 
 
 def validate_and_get_observables(
-    reader: Reader,
-    collector: Collector = Collector.default
+    reader: Reader, collector: Collector = Collector.default
 ) -> Dict[Any, List[str]]:
     """
-    Actual validation implementation. This exists so unit tests can interrogate the generated `observables` dictionary.
+    Actual validation implementation.
+    This exists so unit tests can interrogate the generated `observables` dictionary.
     """
     # Map of observable type_ids to list of definitions
     observables: Dict[Any, List[str]] = {}
@@ -442,7 +445,9 @@ def validate_and_get_observables(
                     return True
         return False
 
-    def check_attributes(source: Dict[str, Any], name_fn: Callable[[str, Dict[str, Any]], str], file: str):
+    def check_attributes(
+        source: Dict[str, Any], name_fn: Callable[[str, Dict[str, Any]], str], file: str
+    ):
         if ATTRIBUTES_KEY in source:
             for a_key, item in source[ATTRIBUTES_KEY].items():
                 if OBSERVABLE_KEY in item:
@@ -450,93 +455,122 @@ def validate_and_get_observables(
 
     def validate_dictionaries(reader: Reader, file: str) -> None:
         if TYPES_KEY in reader[file]:
-            check_attributes(reader[file][TYPES_KEY],
-                             lambda a_key, item: f"{item.get('caption')} (Dictionary Type)",
-                             file)
+            check_attributes(
+                reader[file][TYPES_KEY],
+                lambda a_key, item: f"{item.get('caption')} (Dictionary Type)",
+                file,
+            )
 
-        check_attributes(reader[file],
-                         lambda a_key, item: f"{item.get('caption')} (Dictionary Attribute)",
-                         file)
+        check_attributes(
+            reader[file],
+            lambda a_key, item: f"{item.get('caption')} (Dictionary Attribute)",
+            file,
+        )
 
     def validate_objects(reader: Reader, file: str) -> None:
-        # Special-case: the "observable" object model's type_id enum has the base for observable type_id
-        # typically defining 0: "Unknown" and 99: "Other", which are otherwise not defined.
-        if (reader[file].get("name") == "observable"
-                and ATTRIBUTES_KEY in reader[file]
-                and "type_id" in reader[file][ATTRIBUTES_KEY]
-                and "enum" in reader[file][ATTRIBUTES_KEY]["type_id"]):
+        # Special-case: the "observable" object model's type_id enum has the base for
+        # observable type_id typically defining 0: "Unknown" and 99: "Other", which are
+        # otherwise not defined.
+        if (
+            reader[file].get("name") == "observable"
+            and ATTRIBUTES_KEY in reader[file]
+            and "type_id" in reader[file][ATTRIBUTES_KEY]
+            and "enum" in reader[file][ATTRIBUTES_KEY]["type_id"]
+        ):
             enum_dict = reader[file][ATTRIBUTES_KEY]["type_id"]["enum"]
             for observable_type_id_str, enum in enum_dict.items():
                 name = enum.get("caption", f"Observable enum {observable_type_id_str}")
                 check_collision(int(observable_type_id_str), name, file)
 
-        # Check for illegal definition in "hidden" objects. Hidden (or "intermediate") objects are those that are not
-        # a "special extends" case, and the name has a leading underscore.
-        if (not _is_special_extends(reader[file])
-                and "name" in reader[file]
-                and PurePath(reader[file]["name"]).name.startswith("_")):
+        # Check for illegal definition in "hidden" objects. Hidden (or "intermediate")
+        # objects are those that are not a "special extends" case, and the name has a
+        # leading underscore.
+        if (
+            not _is_special_extends(reader[file])
+            and "name" in reader[file]
+            and PurePath(reader[file]["name"]).name.startswith("_")
+        ):
             if OBSERVABLE_KEY in reader[file]:
                 cause = (
-                    f'Illegal "{OBSERVABLE_KEY}" definition in hidden object, file "{file}":'
-                    f' defining top-level observable in a hidden object (name with leading underscore)'
-                    f' causes collisions in child objects'
+                    f'Illegal "{OBSERVABLE_KEY}" definition in hidden object,'
+                    f' file "{file}": defining top-level observable in a hidden'
+                    f"  object (name with leading underscore) causes collisions"
+                    f" in child objects"
                 )
                 collector.handle(IllegalObservableTypeIDError(cause))
 
             if any_attribute_has_observable(reader[file]):
                 cause = (
-                    f'Illegal definition of one or more attributes with "{OBSERVABLE_KEY}" in hidden object,'
-                    f' file "{file}": defining attribute observables in a hidden object'
-                    f' (name with leading underscore) causes collisions in child objects'
+                    f"Illegal definition of one or more attributes with"
+                    f' "{OBSERVABLE_KEY}" in hidden object, file "{file}": defining'
+                    f" attribute observables in a hidden object (name with leading"
+                    f" underscore) causes collisions in child objects"
                 )
                 collector.handle(IllegalObservableTypeIDError(cause))
 
         # Check top-level observable -- entire object is an observable
         if OBSERVABLE_KEY in reader[file]:
-            check_collision(reader[file][OBSERVABLE_KEY], f"{reader[file].get('caption')} (Object)", file)
+            check_collision(
+                reader[file][OBSERVABLE_KEY],
+                f"{reader[file].get('caption')} (Object)",
+                file,
+            )
 
         # Check object-specific attributes
         check_attributes(
             reader[file],
-            lambda a_key, item:  f"{reader[file].get('caption')} Object: {a_key} (Object-Specific Attribute)",
-            file)
+            lambda a_key, item: f"{reader[file].get('caption')} Object: {a_key}"
+            f" (Object-Specific Attribute)",
+            file,
+        )
 
     def validate_classes(reader: Reader, file: str) -> None:
-        # Classes do not have top-level "observable" attribute -- you can't specify an entire class as an observable.
+        # Classes do not have top-level "observable" attribute -- you can't specify an
+        # entire class as an observable.
 
-        # Check for illegal definition in "hidden" classes. Hidden (or "intermediate") classes are those that are not
-        # a "special extends" case, the name isn't "base_class", and class doesn't have a "uid".
-        if (not _is_special_extends(reader[file])
-                and "base_event" != reader[file].get("name")
-                and "uid" not in reader[file]):
+        # Check for illegal definition in "hidden" classes. Hidden (or "intermediate")
+        # classes are those that are not a "special extends" case, the name isn't
+        # "base_class", and class doesn't have a "uid".
+        if (
+            not _is_special_extends(reader[file])
+            and "base_event" != reader[file].get("name")
+            and "uid" not in reader[file]
+        ):
             if OBSERVABLES_KEY in reader[file]:
                 cause = (
-                    f'Illegal "{OBSERVABLES_KEY}" definition in hidden class, file "{file}":'
-                    f' defining attribute path based observables in a hidden class'
-                    f' (classes other than "base_event" without a "uid") causes collisions in child classes'
+                    f'Illegal "{OBSERVABLES_KEY}" definition in hidden class, file'
+                    f' "{file}": defining attribute path based observables in a hidden'
+                    f' class (classes other than "base_event" without a "uid") causes'
+                    f" collisions in child classes"
                 )
                 collector.handle(IllegalObservableTypeIDError(cause))
 
             if any_attribute_has_observable(reader[file]):
                 cause = (
-                    f'Illegal definition of attribute with "{OBSERVABLE_KEY}" in hidden class, file "{file}":'
-                    f' defining attribute observables in a hidden class'
-                    f' (classes other than "base_event" without a "uid") causes collisions in child classes'
+                    f'Illegal definition of attribute with "{OBSERVABLE_KEY}" in hidden'
+                    f' class, file "{file}": defining attribute observables in a hidden'
+                    f' class (classes other than "base_event" without a "uid") causes'
+                    f" collisions in child classes"
                 )
                 collector.handle(IllegalObservableTypeIDError(cause))
 
         # Check class-specific attributes
         check_attributes(
             reader[file],
-            lambda a_key, item:  f"{reader[file].get('caption')} Class: {a_key} (Class-Specific Attribute)",
-            file)
+            lambda a_key, item: f"{reader[file].get('caption')} Class: {a_key}"
+            f" (Class-Specific Attribute)",
+            file,
+        )
 
         # Check class-specific attribute path observables
         if OBSERVABLES_KEY in reader[file]:
             for attribute_path in reader[file][OBSERVABLES_KEY]:
-                check_collision(reader[file][OBSERVABLES_KEY][attribute_path],
-                                f"{reader[file]['caption']} Class: {attribute_path} (Class-Specific Attribute Path)",
-                                file)
+                check_collision(
+                    reader[file][OBSERVABLES_KEY][attribute_path],
+                    f"{reader[file]['caption']} Class: {attribute_path}"
+                    f" (Class-Specific Attribute Path)",
+                    file,
+                )
 
     reader.apply(validate_dictionaries, DictionaryMatcher())
     reader.apply(validate_objects, ObjectMatcher())
@@ -547,8 +581,8 @@ def validate_and_get_observables(
 
 def _is_special_extends(item):
     """
-    Returns True if class or object is a "special extends", which is a weird reverse extends allowing extensions to
-    modify core schema classes and objects.
+    Returns True if class or object is a "special extends", which is a weird reverse
+    extends allowing extensions to modify core schema classes and objects.
     """
     name = item.get("name")
     if name is None:
@@ -569,7 +603,10 @@ def validate_event_categories(
             categories.update(reader[file][ATTRIBUTES_KEY].keys())
 
     def validate_classes(reader: Reader, file: str) -> None:
-        if CATEGORY_KEY in reader[file] and reader[file][CATEGORY_KEY] not in categories:
+        if (
+            CATEGORY_KEY in reader[file]
+            and reader[file][CATEGORY_KEY] not in categories
+        ):
             collector.handle(UnknownCategoryError(reader[file][CATEGORY_KEY], file))
 
     reader.apply(gather_categories, CategoriesMatcher())

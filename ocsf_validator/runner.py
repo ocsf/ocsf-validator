@@ -1,5 +1,5 @@
-"""Validate OCSF Schema definitions.
-
+"""
+Validate OCSF Schema definitions.
 """
 
 import traceback
@@ -70,7 +70,8 @@ class ValidatorOptions:
     """An `extends` inheritance target is missing."""
 
     imprecise_inheritance: int = Severity.INFO
-    """An `extends` inheritance target is resolvable but imprecise and possibly ambiguous."""
+    """An `extends` inheritance target is resolvable
+    but imprecise and possibly ambiguous."""
 
     missing_key: int = Severity.ERROR
     """A required key is missing."""
@@ -241,12 +242,17 @@ class ValidationRunner:
 
         try:
             print(self.txt_emphasize("===[ OCSF Schema Validator ]==="))
-            print("Validating OCSF Schema at:", self.txt_highlight(self.options.base_path))
+            print(
+                "Validating OCSF Schema at:", self.txt_highlight(self.options.base_path)
+            )
             b_path = Path(self.options.base_path)
             if not b_path.is_absolute():
                 print("  Absolute path:", str(b_path.resolve()))
             if self.options.metaschema_path is not None:
-                print("Using metaschema at:", self.txt_highlight(self.options.metaschema_path))
+                print(
+                    "Using metaschema at:",
+                    self.txt_highlight(self.options.metaschema_path),
+                )
                 m_path = Path(self.options.metaschema_path)
                 if not m_path.is_absolute():
                     print("  Absolute path:", str(m_path.resolve()))
@@ -336,7 +342,9 @@ class ValidationRunner:
 
             test(
                 "Event class categories are defined",
-                lambda: validate_event_categories(reader, collector=collector, types=types),
+                lambda: validate_event_categories(
+                    reader, collector=collector, types=types
+                ),
             )
 
             test(

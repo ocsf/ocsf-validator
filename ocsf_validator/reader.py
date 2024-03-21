@@ -58,7 +58,9 @@ class Reader(ABC):
                     path = Path(options)
                 else:
                     path = options
-                options = ReaderOptions(base_path=path, metaschema_path=(path / "metaschema"))
+                options = ReaderOptions(
+                    base_path=path, metaschema_path=(path / "metaschema")
+                )
 
             self._options = options
         else:
@@ -160,7 +162,9 @@ class DictReader(Reader):
 
     Useful (hopefully) for testing and debugging."""
 
-    def __init__(self, options: ReaderOptions | Pathable | SchemaData | None = None) -> None:
+    def __init__(
+        self, options: ReaderOptions | Pathable | SchemaData | None = None
+    ) -> None:
         if isinstance(options, dict):
             super().__init__(None)
             self.set_data(options)

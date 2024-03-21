@@ -192,19 +192,27 @@ def test_validate_observables():
                 "attributes": {
                     "string_t": {"caption": "String"},
                     "integer_t": {"caption": "Integer"},
-                    "gamma_t": {"caption": "Gamma_T", "type": "string_t", "type_name": "String"},
-                    "delta_t": {"caption": "Delta_T", "type": "integer_t", "type_name": "Integer", "observable": 2},
+                    "gamma_t": {
+                        "caption": "Gamma_T",
+                        "type": "string_t",
+                        "type_name": "String",
+                    },
+                    "delta_t": {
+                        "caption": "Delta_T",
+                        "type": "integer_t",
+                        "type_name": "Integer",
+                        "observable": 2,
+                    },
                 },
-            }
+            },
         },
-
         "/objects/bird.json": {
             "name": "bird",
             "caption": "Bird",
             "attributes": {
                 "name": {"requirement": "required"},
                 "alpha": {"requirement": "required"},
-            }
+            },
         },
         "/objects/cat.json": {
             "name": "cat",
@@ -212,8 +220,8 @@ def test_validate_observables():
             "observable": 10,
             "attributes": {
                 "name": {"requirement": "required"},
-                "alpha": {"requirement": "required"}
-            }
+                "alpha": {"requirement": "required"},
+            },
         },
         "/objects/dog.json": {
             "name": "dog",
@@ -221,19 +229,14 @@ def test_validate_observables():
             "attributes": {
                 "name": {"requirement": "required"},
                 "alpha": {"requirement": "required", "observable": 11},
-            }
+            },
         },
         "/objects/dog_house.json": {
             "name": "dog_house",
             "caption": "Dog House",
-            "attributes": {
-                "tenant": {"type": "dog", "requirement": "required"}
-            },
-            "observables": {
-                "dog.name": 12
-            }
+            "attributes": {"tenant": {"type": "dog", "requirement": "required"}},
+            "observables": {"dog.name": 12},
         },
-
         "/events/blue.json": {
             "uid": 1,
             "name": "blue",
@@ -243,38 +246,35 @@ def test_validate_observables():
             "uid": 2,
             "name": "green",
             "caption": "Green",
-            "observable": 100,
         },
         "/events/red.json": {
             "uid": 3,
             "name": "red",
             "caption": "Red",
-            "attributes": {
-                "beta": {"requirement": "required", "observable": 101}
-            }
+            "attributes": {"beta": {"requirement": "required", "observable": 100}},
         },
         "/events/yellow.json": {
             "uid": 4,
             "name": "yellow",
             "caption": "Yellow",
-            "attributes": {
-                "bird": {"requirement": "required"}
-            },
-            "observables": {
-                "bird.name": 102
-            }
+            "attributes": {"bird": {"requirement": "required"}},
+            "observables": {"bird.name": 101},
         },
     }
 
     observables = validate_and_get_observables(DictReader(good_data))
     assert observables is not None
-    assert len(observables) == 7
+    assert len(observables) == 6
     print("\ntest_validate_observables - collected observables:")
     print(observables_to_string(observables))
 
     with pytest.raises(IllegalObservableTypeIDError):
         bad_data = dict(good_data)
-        bad_data["/objects/_hidden.json"] = {"name": "_hidden", "caption": "Hidden", "observable": 1}
+        bad_data["/objects/_hidden.json"] = {
+            "name": "_hidden",
+            "caption": "Hidden",
+            "observable": 1,
+        }
         validate_observables(DictReader(bad_data))
 
     with pytest.raises(IllegalObservableTypeIDError):
@@ -282,9 +282,7 @@ def test_validate_observables():
         bad_data["/objects/_hidden.json"] = {
             "name": "_hidden",
             "caption": "Hidden",
-            "attributes": {
-                "beta": {"requirement": "required", "observable": 1}
-            }
+            "attributes": {"beta": {"requirement": "required", "observable": 1}},
         }
         validate_observables(DictReader(bad_data))
 
@@ -293,24 +291,31 @@ def test_validate_observables():
         bad_data["/events/_hidden.json"] = {
             "name": "hidden",
             "caption": "Hidden",
-            "attributes": {
-                "beta": {"requirement": "required", "observable": 1}
-            }
+            "attributes": {"beta": {"requirement": "required", "observable": 1}},
         }
         validate_observables(DictReader(bad_data))
 
     with pytest.raises(ObservableTypeIDCollisionError):
         bad_data = dict(good_data)
         dictionary_attributes = bad_data["dictionary.json"]["attributes"]
-        dictionary_attributes["epsilon"] = {"caption": "Epsilon", "type": "string_t", "observable": 1}
+        dictionary_attributes["epsilon"] = {
+            "caption": "Epsilon",
+            "type": "string_t",
+            "observable": 1,
+        }
         validate_observables(DictReader(bad_data))
 
     with pytest.raises(ObservableTypeIDCollisionError):
         bad_data = dict(good_data)
         dictionary_types_attributes = bad_data["dictionary.json"]["types"]["attributes"]
-        dictionary_types_attributes["epsilon_t"] = {
-            "caption": "Epsilon_T", "type": "string_t", "type_name": "String", "observable": 2
-        },
+        dictionary_types_attributes["epsilon_t"] = (
+            {
+                "caption": "Epsilon_T",
+                "type": "string_t",
+                "type_name": "String",
+                "observable": 2,
+            },
+        )
         validate_observables(DictReader(bad_data))
 
 
@@ -329,6 +334,21 @@ def test_validate_event_categories():
     }
     validate_event_categories(DictReader(good_data))
 
+    bad_data = {
+        "categories.json": {
+            "attributes": {
+                "alpha": {"caption": "Alpha", "uid": 1},
+                "beta": {"caption": "Beta", "uid": 2},
+            }
+        },
+        "events/foo.json": {"caption": "Foo", "category": "alpha"},
+        "events/bar.json": {"caption": "Bar", "category": "gamma"},
+        "events/baz.json": {"caption": "Baz", "category": "other"},
+        "events/guux.json": {"caption": "Quux"},
+    }
+    with pytest.raises(UnknownCategoryError):
+        validate_event_categories(DictReader(bad_data))
+
 
 def test_validate_metaschemas():
     # set up a json schema that expects an object with a name property only
@@ -337,22 +357,13 @@ def test_validate_metaschemas():
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "Object",
         "type": "object",
-        "required": [
-            "name"
-        ],
-        "properties": {
-            "name": {
-                "type": "string"
-            }
-        },
-        "additionalProperties": False
+        "required": ["name"],
+        "properties": {"name": {"type": "string"}},
+        "additionalProperties": False,
     }
 
     # set up a function to a create a registry in memory
-    expected_schemas = [
-        "object.schema.json",
-        "event.schema.json"
-    ]
+    expected_schemas = ["object.schema.json", "event.schema.json"]
 
     def _get_registry(reader, base_uri):
         registry = referencing.Registry()
