@@ -483,10 +483,10 @@ def validate_and_get_observables(
                 check_collision(int(observable_type_id_str), name, file)
 
         # Check for illegal definition in "hidden" objects. Hidden (or "intermediate")
-        # objects are those that are not a "special extends" case, and the name has a
+        # objects are those that are not a patch extends case, and the name has a
         # leading underscore.
         if (
-            not _is_special_extends(reader[file])
+            not _is_patch_extends(reader[file])
             and "name" in reader[file]
             and PurePath(reader[file]["name"]).name.startswith("_")
         ):
@@ -529,10 +529,10 @@ def validate_and_get_observables(
         # entire class as an observable.
 
         # Check for illegal definition in "hidden" classes. Hidden (or "intermediate")
-        # classes are those that are not a "special extends" case, the name isn't
+        # classes are those that are not a patch extends case, the name isn't
         # "base_class", and class doesn't have a "uid".
         if (
-            not _is_special_extends(reader[file])
+            not _is_patch_extends(reader[file])
             and "base_event" != reader[file].get("name")
             and "uid" not in reader[file]
         ):
@@ -579,10 +579,10 @@ def validate_and_get_observables(
     return observables
 
 
-def _is_special_extends(item):
+def _is_patch_extends(item):
     """
-    Returns True if class or object is a "special extends", which is a weird reverse
-    extends allowing extensions to modify core schema classes and objects.
+    Returns True if class or object is a "special" patch extends, which allows
+    extensions to modify core schema classes and objects.
     """
     name = item.get("name")
     if name is None:
