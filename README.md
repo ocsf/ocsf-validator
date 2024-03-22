@@ -79,8 +79,8 @@ poetry install
 
 Before committing, run the formatters and tests:
 ```
-poetry run isort
-poetry run black
+poetry run isort .
+poetry run black .
 poetry run pyright
 poetry run pytest
 ```

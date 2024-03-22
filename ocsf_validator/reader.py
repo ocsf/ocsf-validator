@@ -6,16 +6,13 @@ access to the OCSF schema as its represented in the definition files.
 """
 
 import json
-import re
 from abc import ABC
 from dataclasses import dataclass
-from enum import IntEnum
-from pathlib import Path, PurePath
+from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Optional
 
 from ocsf_validator.errors import InvalidBasePathError
 from ocsf_validator.matchers import Matcher
-from ocsf_validator.types import *
 
 # TODO would os.PathLike be better?
 Pathable = str | Path
@@ -32,6 +29,9 @@ class ReaderOptions:
 
     base_path: Optional[Path] = None
     """The base path from which to load the schema."""
+
+    metaschema_path: Optional[Path] = None
+    """The metaschema path from which to load the metaschema."""
 
     read_extensions: bool = True
     """Recurse extensions."""
@@ -58,7 +58,9 @@ class Reader(ABC):
                     path = Path(options)
                 else:
                     path = options
-                options = ReaderOptions(base_path=path)
+                options = ReaderOptions(
+                    base_path=path, metaschema_path=(path / "metaschema")
+                )
 
             self._options = options
         else:
@@ -70,6 +72,10 @@ class Reader(ABC):
     @property
     def base_path(self):
         return self._options.base_path
+
+    @property
+    def metaschema_path(self):
+        return self._options.metaschema_path
 
     def contents(self, path: Pathable) -> SchemaData:
         """Retrieve the parsed JSON data in a given file."""
@@ -155,6 +161,15 @@ class DictReader(Reader):
     """A Reader that works from a `dict` without reading the filesystem.
 
     Useful (hopefully) for testing and debugging."""
+
+    def __init__(
+        self, options: ReaderOptions | Pathable | SchemaData | None = None
+    ) -> None:
+        if isinstance(options, dict):
+            super().__init__(None)
+            self.set_data(options)
+        else:
+            super().__init__(options)
 
     def set_data(self, data: SchemaData):
         self._data = data.copy()

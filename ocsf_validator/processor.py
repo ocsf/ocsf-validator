@@ -4,9 +4,15 @@ from typing import Any, Callable, Optional
 from ocsf_validator.errors import *
 from ocsf_validator.reader import Reader
 from ocsf_validator.type_mapping import TypeMapping
-from ocsf_validator.types import (ATTRIBUTES_KEY, EXTENDS_KEY, INCLUDE_KEY,
-                                  PROFILES_KEY, OcsfDictionary, OcsfEvent,
-                                  OcsfObject)
+from ocsf_validator.types import (
+    ATTRIBUTES_KEY,
+    EXTENDS_KEY,
+    INCLUDE_KEY,
+    PROFILES_KEY,
+    OcsfDictionary,
+    OcsfEvent,
+    OcsfObject,
+)
 
 
 def deep_merge(
@@ -64,7 +70,8 @@ class DependencyResolver:
 
         for file in filenames:
             if relative_to is not None:
-                # Search extension for relative include path, e.g. /includes/thing.json -> /extensions/stuff/includes/thing.json
+                # Search extension for relative include path,
+                # e.g. /includes/thing.json -> /extensions/stuff/includes/thing.json
                 extn = self._types.extension(relative_to)
                 if extn is not None:
                     k = self._reader.key("extensions", extn, file)
@@ -247,8 +254,10 @@ class ExtendsParser(MergeParser):
 class ProfilesParser(MergeParser):
     def applies_to(self, t: type) -> bool:
         if hasattr(t, "__required_keys__") or hasattr(t, "__optional_keys"):
-            return PROFILES_KEY in t.__required_keys__ or PROFILES_KEY in t.__optional_keys__  # type: ignore
-
+            return (
+                PROFILES_KEY in t.__required_keys__
+                or PROFILES_KEY in t.__optional_keys__  # type: ignore
+            )
         else:
             return False
 
@@ -275,7 +284,10 @@ class ProfilesParser(MergeParser):
 class AttributesParser(MergeParser):
     def applies_to(self, t: type) -> bool:
         if hasattr(t, "__required_keys__") or hasattr(t, "__optional_keys"):
-            return ATTRIBUTES_KEY in t.__required_keys__ or ATTRIBUTES_KEY in t.__optional_keys__  # type: ignore
+            return (
+                ATTRIBUTES_KEY in t.__required_keys__
+                or ATTRIBUTES_KEY in t.__optional_keys__  # type: ignore
+            )
         else:
             return False
 
@@ -308,7 +320,8 @@ class AttributesParser(MergeParser):
         root = self._root_dict()
         extn = self._extn_dict(path)
 
-        # TODO is the dict name comparison enough or do we need to find by the `name` key?
+        # TODO is the dict name comparison enough
+        #      or do we need to find by the `name` key?
         for name, attr in attrs.items():
             if name in extn:
                 deep_merge(attrs[name], extn[name])
@@ -318,7 +331,13 @@ class AttributesParser(MergeParser):
 
 class IncludeParser(MergeParser):
     def applies_to(self, t: type) -> bool:
-        return ("__required_keys__" in t.__dict__ and INCLUDE_KEY in t.__required_keys__) or ("__optional_keys__" in t.__dict__ and INCLUDE_KEY in t.__optional_keys__)  # type: ignore
+        return (
+            "__required_keys__" in t.__dict__
+            and INCLUDE_KEY in t.__required_keys__  # type: ignore
+        ) or (
+            "__optional_keys__" in t.__dict__
+            and INCLUDE_KEY in t.__optional_keys__  # type: ignore
+        )
 
     def _has_includes(self, defn: dict[str, Any]) -> bool:
         """Recursively search for $include directives."""

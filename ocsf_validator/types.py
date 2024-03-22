@@ -11,6 +11,7 @@ from typing import (
 )
 
 ATTRIBUTES_KEY = "attributes"
+CATEGORY_KEY = "category"
 PROFILES_KEY = "profiles"
 EXTENDS_KEY = "extends"
 INCLUDE_KEY = "$include"
@@ -131,6 +132,7 @@ OcsfObject = TypedDict(
         "observable": NotRequired[int],
         "profiles": NotRequired[Sequence[str]],
         "constraints": NotRequired[Dict[str, Sequence[str]]],
+        "observables": NotRequired[Dict[str, int]],
         "$include": NotRequired[Union[str, Sequence[str]]],
         "@deprecated": NotRequired[OcsfDeprecationInfo],
     },

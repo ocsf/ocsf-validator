@@ -239,3 +239,8 @@ class ObservableTypeIDCollisionError(ValidationError):
             f"Collision with observable type_id {type_id} between {this_def}"
             f" in file {file} and {', '.join(other_defs)}"
         )
+
+
+class UnknownCategoryError(ValidationError):
+    def __init__(self, category: str, file: str):
+        super().__init__(f'Unknown category "{category}" in "{file}"')

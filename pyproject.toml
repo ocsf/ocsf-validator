@@ -1,8 +1,12 @@
 [tool.poetry]
 name = "ocsf-validator"
-version = "0.1.5"
+version = "0.1.6"
 description = "OCSF Schema Validation"
-authors = ["Jeremy Fisher <jeremy@query.ai>", "Alan Pinkert <apinkert@cisco.com>"]
+authors = [
+    "Jeremy Fisher <jeremy@query.ai>",
+    "Alan Pinkert <apinkert@cisco.com>",
+    "Rick Mouritzen <rmouritzen@splunk.com>",
+]
 readme = "README.md"
 packages = [{include = "ocsf_validator"}]
 

@@ -1,5 +1,5 @@
-"""Validate OCSF Schema definitions.
-
+"""
+Validate OCSF Schema definitions.
 """
 
 import traceback
@@ -16,6 +16,7 @@ from ocsf_validator.reader import FileReader, ReaderOptions
 from ocsf_validator.type_mapping import TypeMapping
 from ocsf_validator.validators import (
     validate_attr_types,
+    validate_event_categories,
     validate_include_targets,
     validate_intra_type_collisions,
     validate_metaschemas,
@@ -40,6 +41,9 @@ class ValidatorOptions:
 
     base_path: str = "."
     """The base path of the schema."""
+
+    metaschema_path: str = None
+    """The path to the schema's metaschema."""
 
     extensions: bool = True
     """Include the contents of extensions."""
@@ -66,7 +70,8 @@ class ValidatorOptions:
     """An `extends` inheritance target is missing."""
 
     imprecise_inheritance: int = Severity.INFO
-    """An `extends` inheritance target is resolvable but imprecise and possibly ambiguous."""
+    """An `extends` inheritance target is resolvable
+    but imprecise and possibly ambiguous."""
 
     missing_key: int = Severity.ERROR
     """A required key is missing."""
@@ -106,6 +111,9 @@ class ValidatorOptions:
 
     observable_collision: int = Severity.ERROR
     """Colliding observable type_id defined."""
+
+    unknown_category: int = Severity.ERROR
+    """Unknown category."""
 
     def severity(self, err: Exception):
         match type(err):
@@ -147,6 +155,8 @@ class ValidatorOptions:
                 return self.illegal_observable
             case errors.ObservableTypeIDCollisionError:
                 return self.observable_collision
+            case errors.UnknownCategoryError:
+                return self.unknown_category
             case _:
                 return Severity.INFO
 
@@ -233,12 +243,29 @@ class ValidationRunner:
         try:
             print(self.txt_emphasize("===[ OCSF Schema Validator ]==="))
             print(
-                "Validating OCSF Schema at", self.txt_highlight(self.options.base_path)
+                "Validating OCSF Schema at:", self.txt_highlight(self.options.base_path)
             )
+            b_path = Path(self.options.base_path)
+            if not b_path.is_absolute():
+                print("  Absolute path:", str(b_path.resolve()))
+            if self.options.metaschema_path is not None:
+                print(
+                    "Using metaschema at:",
+                    self.txt_highlight(self.options.metaschema_path),
+                )
+                m_path = Path(self.options.metaschema_path)
+                if not m_path.is_absolute():
+                    print("  Absolute path:", str(m_path.resolve()))
 
             # Setup the reader
+            base_path = Path(self.options.base_path)
+            if self.options.metaschema_path is None:
+                metaschema_path = base_path / "metaschema"
+            else:
+                metaschema_path = Path(self.options.metaschema_path)
             opts = ReaderOptions(
-                base_path=Path(self.options.base_path),
+                base_path=base_path,
+                metaschema_path=metaschema_path,
                 read_extensions=self.options.extensions,
             )
             reader = None
@@ -311,6 +338,13 @@ class ValidationRunner:
             test(
                 "Attribute type references are defined",
                 lambda: validate_attr_types(reader, collector=collector, types=types),
+            )
+
+            test(
+                "Event class categories are defined",
+                lambda: validate_event_categories(
+                    reader, collector=collector, types=types
+                ),
             )
 
             test(
