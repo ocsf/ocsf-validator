@@ -237,7 +237,7 @@ class ObservableTypeIDCollisionError(ValidationError):
     def __init__(self, type_id: int, this_def: str, other_defs: list[str], file: str):
         super().__init__(
             f"Collision with observable type_id {type_id} between {this_def}"
-            f" in file {file} and {', '.join(other_defs)}"
+            f" in file {file} and {', '.join(other_defs)}."
         )
 
 

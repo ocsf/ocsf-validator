@@ -467,6 +467,76 @@ def validate_and_get_observables(
             file,
         )
 
+    def validate_classes(reader: Reader, file: str) -> None:
+        # Classes do not have top-level "observable" attribute -- you can't specify an
+        # entire class as an observable.
+
+        # Check for illegal definition in "hidden" classes. Hidden (or "intermediate")
+        # classes are those that are not a patch extends case, the name isn't
+        # "base_class", and class doesn't have a "uid".
+        if (
+            not _is_patch_extends(reader[file])
+            and "base_event" != reader[file].get("name")
+            and "uid" not in reader[file]
+        ):
+            if any_attribute_has_observable(reader[file]):
+                cause = (
+                    f"Illegal definition of one or more attributes with"
+                    f' "{OBSERVABLE_KEY}" in hidden class, file "{file}": defining'
+                    f" attribute observables in a hidden class (classes other than"
+                    f' "base_event" without a "uid") causes collisions in child'
+                    f" classes. Instead define observables (of any kind) in non-hidden"
+                    f" child classes."
+                )
+                collector.handle(IllegalObservableTypeIDError(cause))
+
+            if OBSERVABLES_KEY in reader[file]:
+                cause = (
+                    f'Illegal "{OBSERVABLES_KEY}" definition in hidden class, file'
+                    f' "{file}": defining attribute path based observables in a hidden'
+                    f' class (classes other than "base_event" without a "uid") causes'
+                    f" collisions in child classes. Instead define observables (of any"
+                    f" kind) in non-hidden child classes."
+                )
+                collector.handle(IllegalObservableTypeIDError(cause))
+
+        if _is_patch_extends(reader[file]):
+            if any_attribute_has_observable(reader[file]):
+                cause = (
+                    f"Illegal definition of one or more attributes with"
+                    f' "{OBSERVABLE_KEY}" in patch extends class, file "{file}":'
+                    f" observable definitions in patch extends are not supported."
+                    f" Please file an issue if you find this feature necessary."
+                )
+                collector.handle(IllegalObservableTypeIDError(cause))
+
+            if OBSERVABLES_KEY in reader[file]:
+                cause = (
+                    f'Illegal "{OBSERVABLES_KEY}" definition in patch extends class,'
+                    f' file "{file}": observable definitions in patch extends are not.'
+                    f" supported. Please file an issue if you find this feature"
+                    f" necessary."
+                )
+                collector.handle(IllegalObservableTypeIDError(cause))
+
+        # Check class-specific attributes
+        check_attributes(
+            reader[file],
+            lambda a_key, item: f"{reader[file].get('caption')} Class: {a_key}"
+            f" (Class-Specific Attribute)",
+            file,
+        )
+
+        # Check class-specific attribute path observables
+        if OBSERVABLES_KEY in reader[file]:
+            for attribute_path in reader[file][OBSERVABLES_KEY]:
+                check_collision(
+                    reader[file][OBSERVABLES_KEY][attribute_path],
+                    f"{reader[file]['caption']} Class: {attribute_path}"
+                    f" (Class-Specific Attribute Path)",
+                    file,
+                )
+
     def validate_objects(reader: Reader, file: str) -> None:
         # Special-case: the "observable" object model's type_id enum has the base for
         # observable type_id typically defining 0: "Unknown" and 99: "Other", which are
@@ -494,8 +564,9 @@ def validate_and_get_observables(
                 cause = (
                     f'Illegal "{OBSERVABLE_KEY}" definition in hidden object,'
                     f' file "{file}": defining top-level observable in a hidden'
-                    f"  object (name with leading underscore) causes collisions"
-                    f" in child objects"
+                    f" object (name with leading underscore) causes collisions"
+                    f" in child objects. Instead define observables (of any kind) in"
+                    f" non-hidden child objects."
                 )
                 collector.handle(IllegalObservableTypeIDError(cause))
 
@@ -504,7 +575,27 @@ def validate_and_get_observables(
                     f"Illegal definition of one or more attributes with"
                     f' "{OBSERVABLE_KEY}" in hidden object, file "{file}": defining'
                     f" attribute observables in a hidden object (name with leading"
-                    f" underscore) causes collisions in child objects"
+                    f" underscore) causes collisions in child objects. Instead define"
+                    f" observables (of any kind) in non-hidden child objects."
+                )
+                collector.handle(IllegalObservableTypeIDError(cause))
+
+        if _is_patch_extends(reader[file]):
+            if any_attribute_has_observable(reader[file]):
+                cause = (
+                    f"Illegal definition of one or more attributes with"
+                    f' "{OBSERVABLE_KEY}" in patch extends object, file "{file}":'
+                    f" observable definitions in patch extends are not supported."
+                    f" Please file an issue if you find this feature necessary."
+                )
+                collector.handle(IllegalObservableTypeIDError(cause))
+
+            if OBSERVABLE_KEY in reader[file]:
+                cause = (
+                    f'Illegal "{OBSERVABLE_KEY}" definition in patch extends object,'
+                    f' file "{file}": observable definitions in patch extends are not.'
+                    f" supported. Please file an issue if you find this feature"
+                    f" necessary."
                 )
                 collector.handle(IllegalObservableTypeIDError(cause))
 
@@ -524,57 +615,9 @@ def validate_and_get_observables(
             file,
         )
 
-    def validate_classes(reader: Reader, file: str) -> None:
-        # Classes do not have top-level "observable" attribute -- you can't specify an
-        # entire class as an observable.
-
-        # Check for illegal definition in "hidden" classes. Hidden (or "intermediate")
-        # classes are those that are not a patch extends case, the name isn't
-        # "base_class", and class doesn't have a "uid".
-        if (
-            not _is_patch_extends(reader[file])
-            and "base_event" != reader[file].get("name")
-            and "uid" not in reader[file]
-        ):
-            if OBSERVABLES_KEY in reader[file]:
-                cause = (
-                    f'Illegal "{OBSERVABLES_KEY}" definition in hidden class, file'
-                    f' "{file}": defining attribute path based observables in a hidden'
-                    f' class (classes other than "base_event" without a "uid") causes'
-                    f" collisions in child classes"
-                )
-                collector.handle(IllegalObservableTypeIDError(cause))
-
-            if any_attribute_has_observable(reader[file]):
-                cause = (
-                    f'Illegal definition of attribute with "{OBSERVABLE_KEY}" in hidden'
-                    f' class, file "{file}": defining attribute observables in a hidden'
-                    f' class (classes other than "base_event" without a "uid") causes'
-                    f" collisions in child classes"
-                )
-                collector.handle(IllegalObservableTypeIDError(cause))
-
-        # Check class-specific attributes
-        check_attributes(
-            reader[file],
-            lambda a_key, item: f"{reader[file].get('caption')} Class: {a_key}"
-            f" (Class-Specific Attribute)",
-            file,
-        )
-
-        # Check class-specific attribute path observables
-        if OBSERVABLES_KEY in reader[file]:
-            for attribute_path in reader[file][OBSERVABLES_KEY]:
-                check_collision(
-                    reader[file][OBSERVABLES_KEY][attribute_path],
-                    f"{reader[file]['caption']} Class: {attribute_path}"
-                    f" (Class-Specific Attribute Path)",
-                    file,
-                )
-
     reader.apply(validate_dictionaries, DictionaryMatcher())
-    reader.apply(validate_objects, ObjectMatcher())
     reader.apply(validate_classes, EventMatcher())
+    reader.apply(validate_objects, ObjectMatcher())
 
     return observables
 
