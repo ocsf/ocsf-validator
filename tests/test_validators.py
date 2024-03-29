@@ -1,6 +1,6 @@
 import pytest
 
-from ocsf_validator.reader import DictReader
+from ocsf_validator.reader import DictReader, ReaderOptions
 from ocsf_validator.validators import *
 
 d1 = {
@@ -353,7 +353,7 @@ def test_validate_event_categories():
 def test_validate_metaschemas():
     # set up a json schema that expects an object with a name property only
     object_json_schema = {
-        "$id": "https://schema.ocsf.io/object.schema.json",
+        "$id": "https://fake.schema.ocsf.io/object.schema.json",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "Object",
         "type": "object",
@@ -362,18 +362,17 @@ def test_validate_metaschemas():
         "additionalProperties": False,
     }
 
-    # set up a function to a create a registry in memory
-    expected_schemas = ["object.schema.json", "event.schema.json"]
-
-    def _get_registry(reader, base_uri):
+    def _get_registry(reader, base_uri) -> referencing.Registry:
         registry = referencing.Registry()
-        for schema in expected_schemas:
+        for schema in METASCHEMA_MATCHERS.keys():
             resource = referencing.Resource.from_contents(object_json_schema)
             registry = registry.with_resource(base_uri + schema, resource=resource)
         return registry
 
+    options = ReaderOptions(base_path='')
+
     # test that a bad schema fails validation
-    r = DictReader()
+    r = DictReader(options)
     r.set_data(
         {
             "/objects/thing.json": {
@@ -386,7 +385,7 @@ def test_validate_metaschemas():
         validate_metaschemas(r, get_registry=_get_registry)
 
     # test that a good schema passes validation
-    r = DictReader()
+    r = DictReader(options)
     r.set_data(
         {
             "/objects/thing.json": {
@@ -398,7 +397,7 @@ def test_validate_metaschemas():
     validate_metaschemas(r, get_registry=_get_registry)
 
     # test that a good schema passes validation
-    r = DictReader()
+    r = DictReader(options)
     r.set_data(
         {
             "/objects/thing.json": {

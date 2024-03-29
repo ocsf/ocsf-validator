@@ -48,6 +48,17 @@ from ocsf_validator.types import (
 )
 
 
+METASCHEMA_MATCHERS =  {
+    "event.schema.json": EventMatcher(),
+    "include.schema.json": IncludeMatcher(),
+    "object.schema.json": ObjectMatcher(),
+    "profile.schema.json": ProfileMatcher(),
+    "categories.schema.json": CategoriesMatcher(),
+    "dictionary.schema.json": DictionaryMatcher(),
+    "extension.schema.json": ExtensionMatcher(),
+}
+
+
 def validate_required_keys(
     reader: Reader,
     collector: Collector = Collector.default,
@@ -278,17 +289,8 @@ def validate_metaschemas(
 
     base_uri = "https://schemas.ocsf.io/"
     registry = get_registry(reader, base_uri)
-    matchers = {
-        "event.schema.json": EventMatcher(),
-        "include.schema.json": IncludeMatcher(),
-        "object.schema.json": ObjectMatcher(),
-        "profile.schema.json": ProfileMatcher(),
-        "categories.schema.json": CategoriesMatcher(),
-        "dictionary.schema.json": DictionaryMatcher(),
-        "extension.schema.json": ExtensionMatcher(),
-    }
 
-    for metaschema, matcher in matchers.items():
+    for metaschema, matcher in METASCHEMA_MATCHERS.items():
         try:
             schema = registry.resolver(base_uri).lookup(metaschema).contents
         except referencing.exceptions.Unresolvable as exc:
@@ -301,8 +303,7 @@ def validate_metaschemas(
             continue
 
         def validate(reader: Reader, file: str) -> None:
-            with open(Path(reader.base_path, file), "r") as f:
-                data = json.load(f)
+            data = reader.contents(file)
             validator = jsonschema.Draft202012Validator(schema, registry=registry)
             errors = sorted(validator.iter_errors(data), key=lambda e: e.path)
             for error in errors:
