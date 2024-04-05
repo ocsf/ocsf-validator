@@ -124,9 +124,9 @@ class OcsfProfile(TypedDict):
 OcsfObject = TypedDict(
     "OcsfObject",
     {
-        "caption": str,
-        "description": str,
-        "name": str,
+        "caption": NotRequired[str],
+        "description": NotRequired[str],
+        "name": NotRequired[str],
         "attributes": Dict[str, OcsfAttr],
         "extends": NotRequired[Union[str, list[Optional[str]]]],
         "observable": NotRequired[int],
@@ -143,8 +143,8 @@ OcsfEvent = TypedDict(
     "OcsfEvent",
     {
         "attributes": Dict[str, OcsfAttr],
-        "caption": str,
-        "name": str,
+        "caption": NotRequired[str],
+        "name": NotRequired[str],
         "uid": NotRequired[int],
         "category": NotRequired[str],
         "description": NotRequired[str],
