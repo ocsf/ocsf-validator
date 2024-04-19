@@ -9,10 +9,11 @@ on:
 jobs:
    test:
     name: Run Unit Tests
-    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
@@ -22,6 +23,8 @@ jobs:
       - name: Install Poetry
         uses: snok/install-poetry@v1
       - name: Install dependencies
+        shell: bash
         run: poetry install
       - name: Test
+        shell: bash
         run: poetry run pytest
