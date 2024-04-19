@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import re
-from abc import ABC
 from pathlib import Path
 from typing import Optional
 
@@ -11,7 +12,7 @@ class Matcher:
         raise NotImplementedError()
 
     @staticmethod
-    def make(pattern):
+    def make(pattern) -> Matcher:
         if isinstance(pattern, Matcher):
             return pattern
         else:

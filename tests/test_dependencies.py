@@ -123,7 +123,7 @@ def test_extends():
     assert "thing" in r["/events/network/http_activity.json"]["attributes"]
 
 
-def test_profiles():
+def test_profiles_basic():
     prof = event("profile1", ["thing"])
     httpa = event("http_activity")
     httpa["profiles"] = "profile1"

@@ -6,7 +6,7 @@ import traceback
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Optional
 
 from termcolor import colored
 
@@ -42,7 +42,7 @@ class ValidatorOptions:
     base_path: str = "."
     """The base path of the schema."""
 
-    metaschema_path: str = None
+    metaschema_path: Optional[str] = None
     """The path to the schema's metaschema."""
 
     extensions: bool = True
@@ -204,7 +204,7 @@ class ValidationRunner:
             case _:
                 return self.txt_emphasize("???")
 
-    def validate(self):
+    def validate(self) -> None:
         exit_code = 0
         messages: dict[str, dict[int, set[str]]] = {}
         collector = errors.Collector(throw=False)

@@ -413,10 +413,10 @@ class IncludeParser(MergeParser):
 class Dependencies:
     """A friendly list of dependencies."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._dependencies: dict[str, list[tuple[str, str]]] = {}
 
-    def add(self, child: str, parent: str, label: str = ""):
+    def add(self, child: str, parent: str, label: str = "") -> None:
         if child not in self._dependencies:
             self._dependencies[child] = []
         self._dependencies[child].append((parent, label))

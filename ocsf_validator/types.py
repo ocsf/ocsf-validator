@@ -113,7 +113,6 @@ class OcsfInclude(TypedDict):
 
 class OcsfProfile(TypedDict):
     caption: str
-    caption: str
     description: str
     meta: str
     name: str
