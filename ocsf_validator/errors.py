@@ -196,9 +196,9 @@ class IncludeTypeMismatchError(ValidationError):
         self.file = file
         self.include = include
         if isinstance(t, str):
-            self.cls = t
+            self.cls: str = t
         else:
-            self.cls: str = t.__name__
+            self.cls = t.__name__
         self.directive = directive
         super().__init__(
             f"`{directive}` type mismatch in {file}: expected type `{self.cls}` for {include}"

@@ -5,7 +5,7 @@ from ocsf_validator.matchers import *
 from ocsf_validator.reader import Reader
 from ocsf_validator.types import *
 
-MATCHERS = [
+MATCHERS: list = [
     VersionMatcher(),
     DictionaryMatcher(),
     CategoriesMatcher(),
