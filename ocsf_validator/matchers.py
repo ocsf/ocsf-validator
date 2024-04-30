@@ -122,3 +122,13 @@ class CategoriesMatcher(RegexMatcher, TypeMatcher):
 
     def get_type(self):
         return OcsfCategories
+
+class ExcludeMatcher(Matcher):
+    """
+    A matcher that produces the opposite result of the matcher it's given.
+    """
+    def __init__(self, matcher: Matcher):
+        self.matcher = matcher
+
+    def match(self, value: str) -> bool:
+        return not self.matcher.match(value)

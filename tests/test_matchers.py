@@ -42,6 +42,15 @@ def test_extension_matcher():
     assert m.get_type() is OcsfExtension
 
 
+def test_exclude_matcher():
+    m = ExcludeMatcher(
+        ExtensionMatcher()
+    )
+
+    assert m.match("/extensions/ext1/extension.json") is False
+    assert m.match("/extension.json") is True
+
+
 def test_make_matcher():
     m = Matcher.make(".*thing.json")
 
