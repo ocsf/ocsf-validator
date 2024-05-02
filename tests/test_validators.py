@@ -369,7 +369,7 @@ def test_validate_metaschemas():
             registry = registry.with_resource(base_uri + schema, resource=resource)
         return registry
 
-    options = ReaderOptions(base_path='')
+    options = ReaderOptions(base_path="")
 
     # test that a bad schema fails validation
     r = DictReader(options)

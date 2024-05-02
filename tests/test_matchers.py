@@ -43,9 +43,7 @@ def test_extension_matcher():
 
 
 def test_exclude_matcher():
-    m = ExcludeMatcher(
-        ExtensionMatcher()
-    )
+    m = ExcludeMatcher(ExtensionMatcher())
 
     assert m.match("/extensions/ext1/extension.json") is False
     assert m.match("/extension.json") is True

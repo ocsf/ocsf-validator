@@ -6,49 +6,29 @@ import jsonschema
 import referencing
 import referencing.exceptions
 
-from ocsf_validator.errors import (
-    Collector,
-    IllegalObservableTypeIDError,
-    InvalidAttributeTypeError,
-    InvalidMetaSchemaError,
-    InvalidMetaSchemaFileError,
-    MissingRequiredKeyError,
-    ObservableTypeIDCollisionError,
-    TypeNameCollisionError,
-    UndefinedAttributeError,
-    UndetectableTypeError,
-    UnknownCategoryError,
-    UnknownKeyError,
-    UnusedAttributeError,
-)
-from ocsf_validator.matchers import (
-    AnyMatcher,
-    CategoriesMatcher,
-    DictionaryMatcher,
-    EventMatcher,
-    ExtensionMatcher,
-    IncludeMatcher,
-    ObjectMatcher,
-    ProfileMatcher,
-)
+from ocsf_validator.errors import (Collector, IllegalObservableTypeIDError,
+                                   InvalidAttributeTypeError,
+                                   InvalidMetaSchemaError,
+                                   InvalidMetaSchemaFileError,
+                                   MissingRequiredKeyError,
+                                   ObservableTypeIDCollisionError,
+                                   TypeNameCollisionError,
+                                   UndefinedAttributeError,
+                                   UndetectableTypeError, UnknownCategoryError,
+                                   UnknownKeyError, UnusedAttributeError)
+from ocsf_validator.matchers import (AnyMatcher, CategoriesMatcher,
+                                     DictionaryMatcher, EventMatcher,
+                                     ExtensionMatcher, IncludeMatcher,
+                                     ObjectMatcher, ProfileMatcher)
 from ocsf_validator.processor import process_includes
 from ocsf_validator.reader import Reader
 from ocsf_validator.type_mapping import TypeMapping
-from ocsf_validator.types import (
-    ATTRIBUTES_KEY,
-    CATEGORY_KEY,
-    INCLUDE_KEY,
-    OBSERVABLE_KEY,
-    OBSERVABLES_KEY,
-    TYPES_KEY,
-    OcsfEvent,
-    OcsfObject,
-    is_ocsf_type,
-    leaf_type,
-)
+from ocsf_validator.types import (ATTRIBUTES_KEY, CATEGORY_KEY, INCLUDE_KEY,
+                                  OBSERVABLE_KEY, OBSERVABLES_KEY, TYPES_KEY,
+                                  OcsfEvent, OcsfObject, is_ocsf_type,
+                                  leaf_type)
 
-
-METASCHEMA_MATCHERS =  {
+METASCHEMA_MATCHERS = {
     "event.schema.json": EventMatcher(),
     "include.schema.json": IncludeMatcher(),
     "object.schema.json": ObjectMatcher(),
