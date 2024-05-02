@@ -36,6 +36,8 @@ class AnyMatcher(Matcher):
             if matcher.match(value):
                 return True
 
+        return False
+
     def add(self, matcher: Matcher):
         self._matchers.append(matcher)
 
