@@ -365,7 +365,7 @@ def test_validate_metaschemas():
     def _get_registry(reader, base_uri) -> referencing.Registry:
         registry: referencing.Registry = referencing.Registry()
         for schema in METASCHEMA_MATCHERS.keys():
-            resource = referencing.Resource.from_contents(object_json_schema) # type: ignore
+            resource = referencing.Resource.from_contents(object_json_schema)  # type: ignore
             registry = registry.with_resource(base_uri + schema, resource=resource)
         return registry
 

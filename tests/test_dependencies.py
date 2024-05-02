@@ -1,5 +1,6 @@
-import pytest
 from typing import Any
+
+import pytest
 
 from ocsf_validator.errors import *
 from ocsf_validator.processor import *

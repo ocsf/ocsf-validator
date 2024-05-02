@@ -5,9 +5,15 @@ from ocsf_validator.errors import *
 from ocsf_validator.matchers import CategoriesMatcher, ExcludeMatcher
 from ocsf_validator.reader import Reader
 from ocsf_validator.type_mapping import TypeMapping
-from ocsf_validator.types import (ATTRIBUTES_KEY, EXTENDS_KEY, INCLUDE_KEY,
-                                  PROFILES_KEY, OcsfDictionary, OcsfEvent,
-                                  OcsfObject)
+from ocsf_validator.types import (
+    ATTRIBUTES_KEY,
+    EXTENDS_KEY,
+    INCLUDE_KEY,
+    PROFILES_KEY,
+    OcsfDictionary,
+    OcsfEvent,
+    OcsfObject,
+)
 
 
 def deep_merge(

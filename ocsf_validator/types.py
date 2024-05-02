@@ -1,5 +1,14 @@
-from typing import (Any, Dict, NotRequired, Optional, Required, Sequence,
-                    TypedDict, TypeVar, Union)
+from typing import (
+    Any,
+    Dict,
+    NotRequired,
+    Optional,
+    Required,
+    Sequence,
+    TypedDict,
+    TypeVar,
+    Union,
+)
 
 ATTRIBUTES_KEY = "attributes"
 CATEGORY_KEY = "category"
