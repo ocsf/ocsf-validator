@@ -249,10 +249,11 @@ def validate_intra_type_collisions(
 
 def _default_get_registry(reader: Reader, base_uri: str) -> referencing.Registry:
     registry: referencing.Registry = referencing.Registry()
-    for schema_file_path in reader.metaschema_path.glob("*.schema.json"):
+
+    for schema_file_path in reader.metaschema_path.glob("*.schema.json"):  # type: ignore
         with open(schema_file_path, "r") as file:
             schema = json.load(file)
-            resource = referencing.Resource.from_contents(schema)
+            resource = referencing.Resource.from_contents(schema)  # type: ignore
             registry = registry.with_resource(
                 base_uri + schema_file_path.name, resource=resource
             )

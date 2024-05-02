@@ -365,11 +365,11 @@ def test_validate_metaschemas():
     def _get_registry(reader, base_uri) -> referencing.Registry:
         registry: referencing.Registry = referencing.Registry()
         for schema in METASCHEMA_MATCHERS.keys():
-            resource = referencing.Resource.from_contents(object_json_schema)
+            resource = referencing.Resource.from_contents(object_json_schema) # type: ignore
             registry = registry.with_resource(base_uri + schema, resource=resource)
         return registry
 
-    options = ReaderOptions(base_path="")
+    options = ReaderOptions(base_path=Path(""))
 
     # test that a bad schema fails validation
     r = DictReader(options)

@@ -250,7 +250,7 @@ class ProfilesParser(MergeParser):
     def applies_to(self, t: type) -> bool:
         if hasattr(t, "__required_keys__") or hasattr(t, "__optional_keys"):
             return (
-                PROFILES_KEY in t.__required_keys__
+                PROFILES_KEY in t.__required_keys__  # type: ignore
                 or PROFILES_KEY in t.__optional_keys__  # type: ignore
             )
         else:
@@ -280,7 +280,7 @@ class AttributesParser(MergeParser):
     def applies_to(self, t: type) -> bool:
         if hasattr(t, "__required_keys__") or hasattr(t, "__optional_keys"):
             return (
-                ATTRIBUTES_KEY in t.__required_keys__
+                ATTRIBUTES_KEY in t.__required_keys__  # type: ignore
                 or ATTRIBUTES_KEY in t.__optional_keys__  # type: ignore
             )
         else:
