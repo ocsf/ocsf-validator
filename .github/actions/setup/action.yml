@@ -12,6 +12,8 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
     - name: Install Poetry
+      shell: bash
       uses: snok/install-poetry@v1
     - name: Install dependencies
+      shell: bash
       run: poetry install
