@@ -2,10 +2,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from ocsf_validator.errors import *
-from ocsf_validator.matchers import (
-    CategoriesMatcher,
-    ExcludeMatcher
-)
+from ocsf_validator.matchers import CategoriesMatcher, ExcludeMatcher
 from ocsf_validator.reader import Reader
 from ocsf_validator.type_mapping import TypeMapping
 from ocsf_validator.types import (
@@ -259,7 +256,7 @@ class ProfilesParser(MergeParser):
     def applies_to(self, t: type) -> bool:
         if hasattr(t, "__required_keys__") or hasattr(t, "__optional_keys"):
             return (
-                PROFILES_KEY in t.__required_keys__
+                PROFILES_KEY in t.__required_keys__  # type: ignore
                 or PROFILES_KEY in t.__optional_keys__  # type: ignore
             )
         else:
@@ -289,7 +286,7 @@ class AttributesParser(MergeParser):
     def applies_to(self, t: type) -> bool:
         if hasattr(t, "__required_keys__") or hasattr(t, "__optional_keys"):
             return (
-                ATTRIBUTES_KEY in t.__required_keys__
+                ATTRIBUTES_KEY in t.__required_keys__  # type: ignore
                 or ATTRIBUTES_KEY in t.__optional_keys__  # type: ignore
             )
         else:
@@ -468,9 +465,7 @@ def process_includes(
 
     # categories cannot be extended with dependencies, and it causes problems
     # if we try to include dictionary attributes in categories
-    matcher = ExcludeMatcher(
-        CategoriesMatcher()
-    )
+    matcher = ExcludeMatcher(CategoriesMatcher())
 
     for path in reader.match(matcher):
         for directive, parser in parsers.items():

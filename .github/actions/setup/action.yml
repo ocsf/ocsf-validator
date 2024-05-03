@@ -1,0 +1,18 @@
+name: "setup-ocsf-validator"
+description: "Sets up the CI environment for the ocsf-validator"
+inputs:
+  python-version:
+    description: Python version to use (e.g. "3.11")
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+    - name: Install dependencies
+      shell: bash
+      run: poetry install

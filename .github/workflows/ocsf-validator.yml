@@ -1,0 +1,52 @@
+name: ocsf-validator
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up environment
+        uses: "./.github/actions/setup"
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: pytest
+        run: poetry run pytest
+  black:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up environment
+        uses: "./.github/actions/setup"
+        with:
+          python-version: "3.12"
+      - name: black
+        run: poetry run black --check .
+  isort:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up environment
+        uses: "./.github/actions/setup"
+        with:
+          python-version: "3.12"
+      - name: isort
+        run: poetry run isort --check .
+  pyright:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up environment
+        uses: "./.github/actions/setup"
+        with:
+          python-version: "3.12"
+      - name: pyright
+        run: poetry run pyright

@@ -36,6 +36,8 @@ class AnyMatcher(Matcher):
             if matcher.match(value):
                 return True
 
+        return False
+
     def add(self, matcher: Matcher):
         self._matchers.append(matcher)
 
@@ -123,10 +125,12 @@ class CategoriesMatcher(RegexMatcher, TypeMatcher):
     def get_type(self):
         return OcsfCategories
 
+
 class ExcludeMatcher(Matcher):
     """
     A matcher that produces the opposite result of the matcher it's given.
     """
+
     def __init__(self, matcher: Matcher):
         self.matcher = matcher
 

@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 
 from ocsf_validator.errors import *
@@ -5,18 +7,18 @@ from ocsf_validator.processor import *
 from ocsf_validator.reader import DictReader, Reader
 
 
-def attributes(attrs=[]):
+def attributes(attrs: list = []) -> dict[str, Any]:
     d = {}
     for a in attrs:
         d[a] = {"name": a}
     return {"attributes": d}
 
 
-def obj(name="object", attrs=[]):
+def obj(name: str = "object", attrs: list = []) -> dict[str, Any]:
     return {"name": name, "caption": ""} | attributes(attrs)
 
 
-def event(name="event", attrs=[]):
+def event(name: str = "event", attrs: list = []) -> dict[str, Any]:
     return {"name": name, "caption": ""} | attributes(attrs)
 
 

@@ -1,6 +1,6 @@
-from typing import Iterable, Optional, TypeVar
+from __future__ import annotations
 
-TCollector = TypeVar("TCollector", bound="Collector")
+from typing import Iterable, Optional
 
 
 class Collector:
@@ -11,7 +11,7 @@ class Collector:
     notice the collector until `throw` is `False`.
     """
 
-    default: TCollector  # type: ignore
+    default: Collector
     """Simple singleton used whenever an Optional[Collector] parameter is None."""
 
     def __init__(self, throw: bool = True):
@@ -52,16 +52,13 @@ class ValidationError(Exception):
     ...
 
 
-class InvalidBasePathError(ValidationError):
-    ...
+class InvalidBasePathError(ValidationError): ...
 
 
-class InvalidMetaSchemaError(ValidationError):
-    ...
+class InvalidMetaSchemaError(ValidationError): ...
 
 
-class InvalidMetaSchemaFileError(ValidationError):
-    ...
+class InvalidMetaSchemaFileError(ValidationError): ...
 
 
 class UnusedAttributeError(ValidationError):
