@@ -85,13 +85,8 @@ class MissingRequiredKeyError(ValidationError):
         else:
             trail_str = ".".join(trail)
 
-        if cls is None:
-            cls_str = ""
-        else:
-            cls_str = cls.__name__ + "."
-
         super().__init__(
-            f"Missing required key `{cls_str}{key}` at `{trail_str}` in {file}"
+            f"Missing required key `{key}` at `{trail_str}` in {file}.  Make sure required fields in this file and any supporting files such as dictionaries or includes are populated."
         )
 
 
@@ -113,13 +108,8 @@ class UnknownKeyError(ValidationError):
         else:
             trail_str = ".".join(trail)
 
-        if cls is None:
-            cls_str = ""
-        else:
-            cls_str = cls.__name__
-
         super().__init__(
-            f"Unrecognized key `{key}` of `{cls_str}` at `{trail_str}` in {file}"
+            f"Unrecognized key `{key}` at `{trail_str}` in {file}.  Make sure fields in this file and any supporting files such as dictionaries or includes are valid."
         )
 
 
