@@ -50,6 +50,7 @@ OcsfAttr = TypedDict(
         "enum": NotRequired[Dict[str, OcsfEnumMember]],
         "group": NotRequired[str],
         "is_array": NotRequired[bool],
+        "suppress_checks": NotRequired[Sequence[str]],
         "max_len": NotRequired[int],
         "name": NotRequired[str],
         "notes": NotRequired[str],
