@@ -102,14 +102,6 @@ class ExtensionMatcher(GlobMatcher, TypeMatcher):
         return OcsfExtension
 
 
-class IncludeMatcher(RegexMatcher, TypeMatcher):
-    def __init__(self):
-        self._pattern = re.compile(r".*includes/.*.json")
-
-    def get_type(self):
-        return OcsfInclude
-
-
 class ProfileMatcher(RegexMatcher, TypeMatcher):
     def __init__(self):
         self._pattern = re.compile(r".*profiles/.*.json")

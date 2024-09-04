@@ -27,11 +27,11 @@ def test_include_one():
     net["name"] = "network"
     net["name2"] = "network"
     httpa = event("http_activity")
-    httpa["$include"] = "includes/network.json"
+    httpa["$include"] = "profiles/network.json"
 
     s = {
         "/events/network/http_activity.json": httpa,
-        "/includes/network.json": net,
+        "/profiles/network.json": net,
         "/dictionary.json": attributes(["stuff"]),
     }
 
@@ -49,11 +49,11 @@ def test_include_many():
     net = attributes(["proxy", "src_ip"])
     thing = attributes(["dest_ip", "score"])
     httpa = event("http_activity")
-    httpa["$include"] = ["includes/network.json", "events/thing.json"]
+    httpa["$include"] = ["profiles/network.json", "events/thing.json"]
 
     s = {
         "/events/network/http_activity.json": httpa,
-        "/includes/network.json": net,
+        "/profiles/network.json": net,
         "/events/thing.json": thing,
         "/dictionary.json": attributes(["stuff"]),
     }
@@ -72,11 +72,11 @@ def test_include_attrs():
     net = attributes(["proxy", "src_ip"])
     thing = attributes(["dest_ip", "score"])
     httpa = event("http_activity")
-    httpa["attributes"]["$include"] = ["includes/network.json", "events/thing.json"]
+    httpa["attributes"]["$include"] = ["profiles/network.json", "events/thing.json"]
 
     s = {
         "/events/network/http_activity.json": httpa,
-        "/includes/network.json": net,
+        "/profiles/network.json": net,
         "/events/thing.json": thing,
         "/dictionary.json": attributes(["stuff"]),
     }
@@ -93,7 +93,7 @@ def test_include_attrs():
 
 def test_missing_include():
     httpa = event("http_activity")
-    httpa["attributes"]["$include"] = "includes/network.json"
+    httpa["attributes"]["$include"] = "profiles/network.json"
 
     s = {
         "/events/network/http_activity.json": httpa,
