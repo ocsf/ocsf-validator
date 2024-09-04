@@ -229,9 +229,7 @@ def validate_undefined_attrs(
 
     reader.apply(
         validate,
-        AnyMatcher(
-            [ObjectMatcher(), EventMatcher(), ProfileMatcher()]
-        ),
+        AnyMatcher([ObjectMatcher(), EventMatcher(), ProfileMatcher()]),
     )
 
 
@@ -372,9 +370,7 @@ def validate_attr_types(
 
     reader.apply(
         validate,
-        AnyMatcher(
-            [ObjectMatcher(), EventMatcher(), ProfileMatcher()]
-        ),
+        AnyMatcher([ObjectMatcher(), EventMatcher(), ProfileMatcher()]),
     )
 
 
