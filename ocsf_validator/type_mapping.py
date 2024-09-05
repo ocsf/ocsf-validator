@@ -9,8 +9,6 @@ MATCHERS: list = [
     VersionMatcher(),
     DictionaryMatcher(),
     CategoriesMatcher(),
-    IncludeMatcher(),
-    CategoriesMatcher(),
     ProfileMatcher(),
     ObjectMatcher(),
     EventMatcher(),

@@ -27,7 +27,6 @@ from ocsf_validator.matchers import (
     DictionaryMatcher,
     EventMatcher,
     ExtensionMatcher,
-    IncludeMatcher,
     ObjectMatcher,
     ProfileMatcher,
 )
@@ -49,7 +48,6 @@ from ocsf_validator.types import (
 
 METASCHEMA_MATCHERS = {
     "event.schema.json": EventMatcher(),
-    "include.schema.json": IncludeMatcher(),
     "object.schema.json": ObjectMatcher(),
     "profile.schema.json": ProfileMatcher(),
     "categories.schema.json": CategoriesMatcher(),
@@ -231,9 +229,7 @@ def validate_undefined_attrs(
 
     reader.apply(
         validate,
-        AnyMatcher(
-            [ObjectMatcher(), EventMatcher(), ProfileMatcher(), IncludeMatcher()]
-        ),
+        AnyMatcher([ObjectMatcher(), EventMatcher(), ProfileMatcher()]),
     )
 
 
@@ -374,9 +370,7 @@ def validate_attr_types(
 
     reader.apply(
         validate,
-        AnyMatcher(
-            [ObjectMatcher(), EventMatcher(), ProfileMatcher(), IncludeMatcher()]
-        ),
+        AnyMatcher([ObjectMatcher(), EventMatcher(), ProfileMatcher()]),
     )
 
 

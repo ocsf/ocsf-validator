@@ -72,7 +72,7 @@ class DependencyResolver:
         for file in filenames:
             if relative_to is not None:
                 # Search extension for relative include path,
-                # e.g. /includes/thing.json -> /extensions/stuff/includes/thing.json
+                # e.g. /profiles/thing.json -> /extensions/stuff/profiles/thing.json
                 extn = self._types.extension(relative_to)
                 if extn is not None:
                     k = self._reader.key("extensions", extn, file)
