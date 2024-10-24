@@ -39,6 +39,14 @@ class OcsfDeprecationInfo(TypedDict):
     since: Required[str]
 
 
+class OcsfReference(TypedDict):
+    url: Required[str]
+    description: Required[str]
+
+
+OcsfReferences = Sequence[OcsfReference]
+
+
 OcsfAttr = TypedDict(
     "OcsfAttr",
     {
@@ -64,6 +72,8 @@ OcsfAttr = TypedDict(
         "profile": NotRequired[Optional[Sequence[str]]],
         "values": NotRequired[Sequence[Any]],
         "@deprecated": NotRequired[OcsfDeprecationInfo],
+        "source": NotRequired[str],
+        "references": NotRequired[OcsfReferences],
     },
 )
 
@@ -135,6 +145,7 @@ OcsfObject = TypedDict(
         "observables": NotRequired[Dict[str, int]],
         "$include": NotRequired[Union[str, Sequence[str]]],
         "@deprecated": NotRequired[OcsfDeprecationInfo],
+        "references": NotRequired[OcsfReferences],
     },
 )
 
@@ -155,6 +166,7 @@ OcsfEvent = TypedDict(
         "observables": NotRequired[Dict[str, int]],
         "$include": NotRequired[Union[str, Sequence[str]]],
         "@deprecated": NotRequired[OcsfDeprecationInfo],
+        "references": NotRequired[OcsfReferences],
     },
 )
 
