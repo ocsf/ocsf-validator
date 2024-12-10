@@ -159,6 +159,7 @@ OcsfEvent = TypedDict(
         "uid": NotRequired[int],
         "category": NotRequired[str],
         "description": NotRequired[str],
+        "family": NotRequired[str],
         "extends": NotRequired[Union[str, list[Optional[str]]]],
         "profiles": NotRequired[Sequence[str]],
         "associations": NotRequired[Dict[str, Sequence[str]]],
