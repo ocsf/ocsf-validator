@@ -24,16 +24,6 @@ class OcsfVersion(TypedDict):
     version: str
 
 
-class OcsfEnumMember(TypedDict):
-    caption: str
-    description: NotRequired[str]
-    notes: NotRequired[str]
-
-
-class OcsfEnum(TypedDict):
-    enum: Dict[str, OcsfEnumMember]
-
-
 class OcsfDeprecationInfo(TypedDict):
     message: Required[str]
     since: Required[str]
@@ -45,6 +35,22 @@ class OcsfReference(TypedDict):
 
 
 OcsfReferences = Sequence[OcsfReference]
+
+
+OcsfEnumMember = TypedDict(
+    "OcsfEnumMember",
+    {
+        "@deprecated": NotRequired[OcsfDeprecationInfo],
+        "caption": str,
+        "description": NotRequired[str],
+        "source": NotRequired[str],
+        "references": NotRequired[OcsfReferences],
+    },
+)
+
+
+class OcsfEnum(TypedDict):
+    enum: Dict[str, OcsfEnumMember]
 
 
 OcsfAttr = TypedDict(
