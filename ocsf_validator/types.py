@@ -128,13 +128,19 @@ class OcsfInclude(TypedDict):
     annotations: NotRequired[Dict[str, str]]
 
 
-class OcsfProfile(TypedDict):
-    caption: str
-    description: str
-    meta: str
-    name: str
-    attributes: Dict[str, OcsfAttr]
-    annotations: NotRequired[Dict[str, str]]
+OcsfProfile = TypedDict(
+    "OcsfProfile",
+    {
+        "caption": str,
+        "description": str,
+        "meta": str,
+        "name": str,
+        "attributes": Dict[str, OcsfAttr],
+        "annotations": NotRequired[Dict[str, str]],
+        "references": NotRequired[OcsfReferences],
+        "@deprecated": NotRequired[OcsfDeprecationInfo],
+    },
+)
 
 
 OcsfObject = TypedDict(
