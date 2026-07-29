@@ -27,6 +27,17 @@ class OcsfVersion(TypedDict):
 class OcsfDeprecationInfo(TypedDict):
     message: Required[str]
     since: Required[str]
+    # Names the replacement definition(s), or is an empty sequence when the
+    # deprecated definition was removed with no replacement.
+    #
+    # Keep this NotRequired. Whether "superseded_by" is mandatory is versioned
+    # policy: it lives in each schema branch's metaschema/deprecated.schema.json,
+    # which requires it on main but not on the 1.x release branches. This
+    # validator, by contrast, is released once and installed by every branch via
+    # an unpinned range, so it must describe the vocabulary that may appear
+    # rather than enforce one version's policy. Marking this Required would fail
+    # every "@deprecated" in the release branches.
+    superseded_by: NotRequired[Sequence[str]]
 
 
 class OcsfReference(TypedDict):
