@@ -217,6 +217,12 @@ class MergeParser:
     def apply(self, path: str) -> None:
         for target in self.extract_targets(path):
             exclude = exclude_props(self._types[path], self._types[target])
+            # An explicit constraints object replaces the parent's, including
+            # "constraints": {} which clears inherited constraints. deep_merge
+            # would otherwise copy the parent's at_least_one into that empty
+            # object.
+            if "constraints" in self._reader[path]:
+                exclude.add("constraints")
             deep_merge(self._reader[path], self._reader[target], exclude=exclude)
 
 

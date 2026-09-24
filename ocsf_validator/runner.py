@@ -16,6 +16,7 @@ from ocsf_validator.reader import FileReader, ReaderOptions
 from ocsf_validator.type_mapping import TypeMapping
 from ocsf_validator.validators import (
     validate_attr_types,
+    validate_constraint_requirements,
     validate_event_categories,
     validate_include_targets,
     validate_intra_type_collisions,
@@ -115,6 +116,19 @@ class ValidatorOptions:
     unknown_category: int = Severity.ERROR
     """Unknown category."""
 
+    constraint_member_requirement: int = Severity.ERROR
+    """A constraint member is optional or has no requirement.
+
+    Attributes that participate in ``at_least_one`` or ``just_one`` must be
+    recommended.
+    """
+
+    constraint_member_missing: int = Severity.ERROR
+    """A constraint member does not name an attribute on the record."""
+
+    constraint_member_required: int = Severity.WARN
+    """A constraint member is required, so the constraint is redundant."""
+
     def severity(self, err: Exception):
         match type(err):
             case errors.MissingRequiredKeyError:
@@ -157,6 +171,12 @@ class ValidatorOptions:
                 return self.observable_collision
             case errors.UnknownCategoryError:
                 return self.unknown_category
+            case errors.ConstraintMemberRequirementError:
+                return self.constraint_member_requirement
+            case errors.ConstraintMemberMissingError:
+                return self.constraint_member_missing
+            case errors.ConstraintMemberRequiredError:
+                return self.constraint_member_required
             case _:
                 return Severity.INFO
 
@@ -343,6 +363,13 @@ class ValidationRunner:
             test(
                 "Event class categories are defined",
                 lambda: validate_event_categories(
+                    reader, collector=collector, types=types
+                ),
+            )
+
+            test(
+                "Constraint members are recommended attributes",
+                lambda: validate_constraint_requirements(
                     reader, collector=collector, types=types
                 ),
             )
