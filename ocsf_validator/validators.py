@@ -642,17 +642,45 @@ def validate_constraint_requirements(
             return objects[(extension, name)]
         return objects.get((None, name))
 
+    def lookup_attr(
+        record: dict[str, Any],
+        name: str,
+        extension: Optional[str],
+        seen: set[int],
+    ) -> Optional[dict[str, Any]]:
+        """Find an attribute on this record or the object it extends.
+
+        Extension patches such as extensions/windows/objects/evidences.json
+        list only the fields they add. Core attributes named in the restated
+        constraint live on the extended object, which process_includes does
+        not always merge in.
+        """
+        current: Optional[dict[str, Any]] = record
+        while current is not None and id(current) not in seen:
+            seen.add(id(current))
+            attributes = current.get(ATTRIBUTES_KEY)
+            if isinstance(attributes, dict):
+                attr = attributes.get(name)
+                if isinstance(attr, dict):
+                    return attr
+            parent_name = current.get("extends")
+            if not isinstance(parent_name, str) or parent_name in (
+                "object",
+                "event",
+                "base_event",
+            ):
+                return None
+            current = find_object(extension, parent_name)
+        return None
+
     def resolve_member(
         record: dict[str, Any], member: str, extension: Optional[str]
     ) -> Optional[dict[str, Any]]:
         current = record
         parts = member.split(".")
         for index, part in enumerate(parts):
-            attributes = current.get(ATTRIBUTES_KEY)
-            if not isinstance(attributes, dict):
-                return None
-            attr = attributes.get(part)
-            if not isinstance(attr, dict):
+            attr = lookup_attr(current, part, extension, set())
+            if attr is None:
                 return None
             if index == len(parts) - 1:
                 return attr

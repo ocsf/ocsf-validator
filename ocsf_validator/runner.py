@@ -116,15 +116,14 @@ class ValidatorOptions:
     unknown_category: int = Severity.ERROR
     """Unknown category."""
 
-    constraint_member_requirement: int = Severity.WARN
+    constraint_member_requirement: int = Severity.ERROR
     """A constraint member is optional or has no requirement.
 
     Attributes that participate in ``at_least_one`` or ``just_one`` must be
-    recommended. Warning rather than error while existing schema records still
-    violate the rule.
+    recommended.
     """
 
-    constraint_member_missing: int = Severity.WARN
+    constraint_member_missing: int = Severity.ERROR
     """A constraint member does not name an attribute on the record."""
 
     constraint_member_required: int = Severity.WARN

@@ -51,7 +51,7 @@ The validator performs the following tests on a copy of the schema:
  - All attributes in the attribute dictionary are used. [WARNING]
  - There are no name collisions within a record type. [WARNING]
  - All attributes are defined in the attribute dictionary. [WARNING]
- - Attributes named by ``at_least_one`` and ``just_one`` constraints are recommended. [WARNING]
+ - Attributes named by ``at_least_one`` and ``just_one`` constraints are recommended. Optional or missing members are an error. A required member, which makes the constraint redundant, is a warning. [ERROR]
 
 If any ERROR or FATAL tests fail, the validator exits with a non-zero exit code.
 

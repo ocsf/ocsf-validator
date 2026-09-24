@@ -539,3 +539,68 @@ def test_inherited_constraint_member_requirement():
         validate_constraint_requirements(r)
     assert exc.value.member == "name"
     assert exc.value.file == "/objects/user.json"
+
+
+def test_empty_constraints_clear_the_parent_constraint():
+    r = DictReader()
+    r.set_data(
+        {
+            "/dictionary.json": {"attributes": {}},
+            "/objects/entity.json": {
+                "name": "entity",
+                "attributes": {
+                    "name": {"requirement": "recommended"},
+                    "uid": {"requirement": "recommended"},
+                },
+                "constraints": {"at_least_one": ["name", "uid"]},
+            },
+            "/objects/file.json": {
+                "name": "file",
+                "extends": "entity",
+                "attributes": {},
+                "constraints": {},
+            },
+        }
+    )
+    process_includes(r, collector=Collector(throw=False))
+    assert r["/objects/file.json"]["constraints"] == {}
+    validate_constraint_requirements(r)
+
+
+def test_extension_patch_resolves_extended_object_attributes():
+    r = DictReader()
+    r.set_data(
+        {
+            "/objects/evidences.json": {
+                "name": "evidences",
+                "attributes": {"actor": {"requirement": "recommended"}},
+                "constraints": {"at_least_one": ["actor"]},
+            },
+            "/extensions/windows/objects/evidences.json": {
+                "extends": "evidences",
+                "attributes": {"win_service": {"requirement": "recommended"}},
+                "constraints": {"at_least_one": ["actor", "win_service"]},
+            },
+        }
+    )
+    validate_constraint_requirements(r)
+
+
+def test_constraint_severities():
+    from ocsf_validator.runner import Severity, ValidatorOptions
+
+    options = ValidatorOptions()
+    assert (
+        options.severity(
+            ConstraintMemberRequirementError("at_least_one", "a", "f", "optional")
+        )
+        == Severity.ERROR
+    )
+    assert (
+        options.severity(ConstraintMemberMissingError("at_least_one", "log_file", "f"))
+        == Severity.ERROR
+    )
+    assert (
+        options.severity(ConstraintMemberRequiredError("at_least_one", "name", "f"))
+        == Severity.WARN
+    )
