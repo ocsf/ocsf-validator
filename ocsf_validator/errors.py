@@ -231,3 +231,48 @@ class ObservableTypeIDCollisionError(ValidationError):
 class UnknownCategoryError(ValidationError):
     def __init__(self, category: str, file: str):
         super().__init__(f'Unknown category "{category}" in "{file}"')
+
+
+class ConstraintMemberError(ValidationError):
+    """A constraint member does not satisfy the recommended-attribute rule."""
+
+    def __init__(self, kind: str, member: str, file: str, message: str):
+        self.kind = kind
+        self.member = member
+        self.file = file
+        super().__init__(message)
+
+
+class ConstraintMemberRequirementError(ConstraintMemberError):
+    def __init__(self, kind: str, member: str, file: str, requirement: Optional[str]):
+        shown = requirement if requirement is not None else "unset"
+        super().__init__(
+            kind,
+            member,
+            file,
+            f'Constraint {kind} member "{member}" in {file} is {shown};'
+            " attributes in a constraint must be recommended.",
+        )
+
+
+class ConstraintMemberMissingError(ConstraintMemberError):
+    def __init__(self, kind: str, member: str, file: str):
+        super().__init__(
+            kind,
+            member,
+            file,
+            f'Constraint {kind} member "{member}" in {file} is not an attribute'
+            " of this record.",
+        )
+
+
+class ConstraintMemberRequiredError(ConstraintMemberError):
+    def __init__(self, kind: str, member: str, file: str):
+        super().__init__(
+            kind,
+            member,
+            file,
+            f'Constraint {kind} member "{member}" in {file} is required, which'
+            " makes the constraint redundant. Constraint members must be"
+            " recommended.",
+        )

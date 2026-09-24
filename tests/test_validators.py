@@ -415,3 +415,127 @@ def test_validate_metaschemas():
 
     with pytest.raises(InvalidMetaSchemaFileError) as exc:
         validate_metaschemas(r, get_registry=_get_blank_registry)
+
+
+def test_constraint_members_must_be_recommended():
+    r = DictReader()
+    r.set_data(
+        {
+            "/objects/user.json": {
+                "name": "user",
+                "attributes": {
+                    "account": {"requirement": "recommended"},
+                    "name": {"requirement": "recommended"},
+                },
+                "constraints": {"at_least_one": ["account", "name"]},
+            }
+        }
+    )
+    validate_constraint_requirements(r)
+
+
+def test_constraint_member_optional_is_reported():
+    r = DictReader()
+    r.set_data(
+        {
+            "/objects/user.json": {
+                "name": "user",
+                "attributes": {
+                    "account": {"requirement": "optional"},
+                    "name": {"requirement": "recommended"},
+                },
+                "constraints": {"at_least_one": ["account", "name"]},
+            }
+        }
+    )
+    with pytest.raises(ConstraintMemberRequirementError) as exc:
+        validate_constraint_requirements(r)
+    assert exc.value.member == "account"
+    assert exc.value.kind == "at_least_one"
+
+
+def test_constraint_member_required_is_reported():
+    r = DictReader()
+    r.set_data(
+        {
+            "/objects/aircraft.json": {
+                "name": "aircraft",
+                "attributes": {"uid": {"requirement": "required"}},
+                "constraints": {"just_one": ["uid"]},
+            }
+        }
+    )
+    with pytest.raises(ConstraintMemberRequiredError) as exc:
+        validate_constraint_requirements(r)
+    assert exc.value.member == "uid"
+    assert exc.value.kind == "just_one"
+
+
+def test_constraint_member_missing_is_reported():
+    r = DictReader()
+    r.set_data(
+        {
+            "/events/system/event_log_activity.json": {
+                "name": "event_log_activity",
+                "attributes": {"log_name": {"requirement": "recommended"}},
+                "constraints": {"at_least_one": ["log_file", "log_name"]},
+            }
+        }
+    )
+    with pytest.raises(ConstraintMemberMissingError) as exc:
+        validate_constraint_requirements(r)
+    assert exc.value.member == "log_file"
+
+
+def test_dotted_constraint_member_uses_nested_requirement():
+    r = DictReader()
+    r.set_data(
+        {
+            "/objects/os.json": {
+                "name": "os",
+                "attributes": {
+                    "version": {"requirement": "optional", "type": "string_t"}
+                },
+            },
+            "/objects/device.json": {
+                "name": "device",
+                "attributes": {"os": {"requirement": "required", "type": "os"}},
+            },
+            "/events/discovery/patch_state.json": {
+                "name": "patch_state",
+                "attributes": {"device": {"requirement": "required", "type": "device"}},
+                "constraints": {"at_least_one": ["device.os.version"]},
+            },
+        }
+    )
+    with pytest.raises(ConstraintMemberRequirementError) as exc:
+        validate_constraint_requirements(r)
+    assert exc.value.member == "device.os.version"
+    assert exc.value.file == "/events/discovery/patch_state.json"
+
+
+def test_inherited_constraint_member_requirement():
+    r = DictReader()
+    r.set_data(
+        {
+            "/dictionary.json": {"attributes": {}},
+            "/objects/entity.json": {
+                "name": "entity",
+                "attributes": {
+                    "name": {"requirement": "recommended"},
+                    "uid": {"requirement": "recommended"},
+                },
+                "constraints": {"at_least_one": ["name", "uid"]},
+            },
+            "/objects/user.json": {
+                "name": "user",
+                "extends": "entity",
+                "attributes": {"name": {"requirement": "optional"}},
+            },
+        }
+    )
+    process_includes(r, collector=Collector(throw=False))
+    with pytest.raises(ConstraintMemberRequirementError) as exc:
+        validate_constraint_requirements(r)
+    assert exc.value.member == "name"
+    assert exc.value.file == "/objects/user.json"

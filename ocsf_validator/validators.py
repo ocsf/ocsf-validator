@@ -8,6 +8,9 @@ import referencing.exceptions
 
 from ocsf_validator.errors import (
     Collector,
+    ConstraintMemberMissingError,
+    ConstraintMemberRequiredError,
+    ConstraintMemberRequirementError,
     IllegalObservableTypeIDError,
     InvalidAttributeTypeError,
     InvalidMetaSchemaError,
@@ -603,6 +606,94 @@ def _is_patch_extends(item):
     if name is None:
         name = item.get("extends")
     return name == item.get("extends")
+
+
+# Constraint kinds documented for event classes and objects. Members must be
+# recommended: optional members violate the rule, and required members make
+# at_least_one redundant (and just_one contradictory).
+_CONSTRAINT_KINDS = ("at_least_one", "just_one")
+
+
+def validate_constraint_requirements(
+    reader: Reader,
+    collector: Collector = Collector.default,
+    types: Optional[TypeMapping] = None,
+) -> None:
+    """Constraint members must be recommended attributes.
+
+    Run after ``process_includes`` so ``extends``, profiles, and ``$include``
+    have already filled in inherited attributes and their requirements.
+    Dotted members (``device.os.version``) are resolved through object types.
+    """
+    if types is None:
+        types = TypeMapping(reader)
+
+    objects: dict[tuple[Optional[str], str], dict[str, Any]] = {}
+
+    def index_object(reader: Reader, file: str) -> None:
+        name = reader[file].get("name")
+        if isinstance(name, str) and name:
+            objects[(types.extension(file), name)] = reader[file]
+
+    reader.apply(index_object, ObjectMatcher())
+
+    def find_object(extension: Optional[str], name: str) -> Optional[dict[str, Any]]:
+        if extension is not None and (extension, name) in objects:
+            return objects[(extension, name)]
+        return objects.get((None, name))
+
+    def resolve_member(
+        record: dict[str, Any], member: str, extension: Optional[str]
+    ) -> Optional[dict[str, Any]]:
+        current = record
+        parts = member.split(".")
+        for index, part in enumerate(parts):
+            attributes = current.get(ATTRIBUTES_KEY)
+            if not isinstance(attributes, dict):
+                return None
+            attr = attributes.get(part)
+            if not isinstance(attr, dict):
+                return None
+            if index == len(parts) - 1:
+                return attr
+            type_name = attr.get("type")
+            if not isinstance(type_name, str) or type_name.endswith("_t"):
+                return None
+            nxt = find_object(extension, type_name)
+            if nxt is None:
+                return None
+            current = nxt
+        return None
+
+    def validate(reader: Reader, file: str) -> None:
+        constraints = reader[file].get("constraints")
+        if not isinstance(constraints, dict) or not constraints:
+            return
+        extension = types.extension(file)
+        for kind in _CONSTRAINT_KINDS:
+            members = constraints.get(kind)
+            if not isinstance(members, list):
+                continue
+            for member in members:
+                if not isinstance(member, str) or not member:
+                    continue
+                attr = resolve_member(reader[file], member, extension)
+                if attr is None:
+                    collector.handle(ConstraintMemberMissingError(kind, member, file))
+                    continue
+                requirement = attr.get("requirement")
+                if requirement == "recommended":
+                    continue
+                if requirement == "required":
+                    collector.handle(ConstraintMemberRequiredError(kind, member, file))
+                else:
+                    collector.handle(
+                        ConstraintMemberRequirementError(
+                            kind, member, file, requirement
+                        )
+                    )
+
+    reader.apply(validate, AnyMatcher([ObjectMatcher(), EventMatcher()]))
 
 
 def validate_event_categories(
