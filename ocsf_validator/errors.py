@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 
 class Collector:
@@ -275,4 +275,64 @@ class ConstraintMemberRequiredError(ConstraintMemberError):
             f'Constraint {kind} member "{member}" in {file} is required, which'
             " makes the constraint redundant. Constraint members must be"
             " recommended.",
+        )
+
+
+def _cycle_str(cycle: list[tuple[str, str]]) -> str:
+    """Render a cycle as `record.attr -> record.attr -> record`."""
+    return (
+        " -> ".join(f"{record}.{attr}" for record, attr in cycle) + f" -> {cycle[0][0]}"
+    )
+
+
+class MissingRecursiveAnnotationError(ValidationError):
+    def __init__(self, attr: str, file: str, cycle: list[tuple[str, str]]):
+        self.attr = attr
+        self.file = file
+        self.cycle = cycle
+        super().__init__(
+            f"Attribute `{attr}` in {file} recurses ({_cycle_str(cycle)})"
+            f" but is not marked with `@recursive`. Add the annotation so tools"
+            f" walking the schema know to stop expanding this branch."
+        )
+
+
+class UnnecessaryRecursiveAnnotationError(ValidationError):
+    def __init__(self, attr: str, file: str):
+        self.attr = attr
+        self.file = file
+        super().__init__(
+            f"Attribute `{attr}` in {file} is marked with `@recursive` but does"
+            f" not recurse. Remove the annotation."
+        )
+
+
+class InvalidRecursionPathError(ValidationError):
+    def __init__(
+        self,
+        attr: str,
+        file: str,
+        declared: Any,
+        cycles: list[list[tuple[str, str]]],
+    ):
+        self.attr = attr
+        self.file = file
+        self.declared = declared
+        self.cycles = cycles
+        # `declared` is whatever the schema file held, so it may not be a
+        # sequence of strings. Rendering it must not raise: this error is the
+        # report that the value is wrong.
+        if isinstance(declared, (list, tuple)):
+            shown = "[" + ", ".join(repr(entry) for entry in declared) + "]"
+        else:
+            shown = repr(declared)
+        expected = "; ".join(
+            " -> ".join(f"{record}.{a}" for record, a in cycle[1:]) or "(none)"
+            for cycle in cycles
+        )
+        super().__init__(
+            f"Attribute `{attr}` in {file} declares `@recursive.path` {shown},"
+            f" which does not describe a chain of attributes leading from its"
+            f" type back to `{cycles[0][0] if cycles else attr}`."
+            f" Shortest closing chain: {expected}."
         )

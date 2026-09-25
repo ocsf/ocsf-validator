@@ -15,6 +15,8 @@ from ocsf_validator.errors import (
     InvalidAttributeTypeError,
     InvalidMetaSchemaError,
     InvalidMetaSchemaFileError,
+    InvalidRecursionPathError,
+    MissingRecursiveAnnotationError,
     MissingRequiredKeyError,
     ObservableTypeIDCollisionError,
     TypeNameCollisionError,
@@ -22,6 +24,7 @@ from ocsf_validator.errors import (
     UndetectableTypeError,
     UnknownCategoryError,
     UnknownKeyError,
+    UnnecessaryRecursiveAnnotationError,
     UnusedAttributeError,
 )
 from ocsf_validator.matchers import (
@@ -42,6 +45,7 @@ from ocsf_validator.types import (
     INCLUDE_KEY,
     OBSERVABLE_KEY,
     OBSERVABLES_KEY,
+    RECURSIVE_KEY,
     TYPES_KEY,
     OcsfEvent,
     OcsfObject,
@@ -722,6 +726,177 @@ def validate_constraint_requirements(
                     )
 
     reader.apply(validate, AnyMatcher([ObjectMatcher(), EventMatcher()]))
+
+
+def _shortest_cycles(
+    edges: Dict[str, Dict[str, str]], start: str, attr: str, target: str
+) -> List[List[tuple[str, str]]]:
+    """Enumerate the shortest cycles that close the edge `start.attr -> target`.
+
+    Each cycle is returned as a list of (object name, attribute name) hops
+    beginning with `(start, attr)`. Direct recursion yields a single one-hop
+    cycle. Only the shortest cycles are returned, because they are what an
+    error message should name. A declared path is checked against every simple
+    walk rather than against these, so a longer cycle can still be documented.
+    """
+    if target == start:
+        return [[(start, attr)]]
+
+    # Breadth-first search from `target` back to `start`, keeping every path at
+    # the first depth that reaches it.
+    paths: Dict[str, List[List[tuple[str, str]]]] = {target: [[]]}
+    frontier = [target]
+    while frontier:
+        next_paths: Dict[str, List[List[tuple[str, str]]]] = {}
+        for node in frontier:
+            for hop_attr, hop_target in edges.get(node, {}).items():
+                if hop_target in paths:
+                    continue
+                next_paths.setdefault(hop_target, []).extend(
+                    path + [(node, hop_attr)] for path in paths[node]
+                )
+        if start in next_paths:
+            return [[(start, attr)] + path for path in next_paths[start]]
+        paths |= next_paths
+        frontier = list(next_paths)
+
+    return []
+
+
+def _closes_cycle(
+    edges: Dict[str, Dict[str, str]], start: str, target: str, declared: Any
+) -> bool:
+    """Whether `declared` walks from `target` back to `start` without repeating.
+
+    `@recursive.path` names the chain through which the recursion closes, one
+    "<object>.<attribute>" entry per hop. Any simple walk arriving back at the
+    declaring object is accepted, not only the shortest, because the metaschema
+    permits documenting whichever cycle is worth warning about.
+
+    `declared` comes straight from a schema file, so it may be any JSON value.
+    Anything that is not a walk is simply not a walk; this must not raise.
+    """
+    if not isinstance(declared, (list, tuple)):
+        return False
+
+    if target == start:
+        # Direct recursion closes on its own, so there is no chain to name.
+        return len(declared) == 0
+
+    node = target
+    visited = {start}
+    for entry in declared:
+        if not isinstance(entry, str):
+            return False
+        record, separator, hop = entry.partition(".")
+        if not separator or record != node or node in visited:
+            return False
+        visited.add(node)
+        next_node = edges.get(node, {}).get(hop)
+        if next_node is None:
+            return False
+        node = next_node
+
+    return node == start
+
+
+def validate_recursive_attrs(
+    reader: Reader,
+    collector: Collector = Collector.default,
+    types: Optional[TypeMapping] = None,
+) -> None:
+    """Validate that `@recursive` marks exactly the attributes that recurse.
+
+    Whether an attribute recurses is a fact about the object graph, not a
+    judgement call, so the annotation can be checked rather than trusted. An
+    attribute recurses when expanding it can reenter the object that declares
+    it, either directly or by way of other objects.
+
+    NOTE: This must be called _after_ merging extends and dictionary
+    attributes -- specifically after runner.process_includes -- because an
+    attribute's type and the attributes an object inherits are only resolved
+    then. `network_proxy` only recurses once it has inherited `proxy_endpoint`
+    from `network_endpoint`.
+    """
+    object_names: set[str] = set()
+    for file in reader.match(ObjectMatcher()):
+        name = reader[file].get("name")
+        if isinstance(name, str):
+            object_names.add(name)
+
+    def each_attr(file: str):
+        """Yield (object name, attribute, definition, referenced object or None).
+
+        The referenced object is read from the file being visited rather than
+        from a shared map, so that two files declaring the same object name
+        cannot overwrite each other's attribute types.
+        """
+        name = reader[file].get("name")
+        if not isinstance(name, str):
+            return
+        attributes = reader[file].get(ATTRIBUTES_KEY)
+        if not isinstance(attributes, dict):
+            return
+        for attr, defn in attributes.items():
+            if attr == INCLUDE_KEY or not isinstance(defn, dict):
+                continue
+            target = defn.get("type")
+            yield name, attr, defn, (target if target in object_names else None)
+
+    # Reachability belongs to the object rather than to any one file, so the
+    # graph unions every file contributing attributes to a name.
+    edges: Dict[str, Dict[str, str]] = {}
+    for file in reader.match(ObjectMatcher()):
+        for name, attr, _defn, target in each_attr(file):
+            if target is not None:
+                edges.setdefault(name, {})[attr] = target
+
+    reachable: Dict[str, set[str]] = {}
+    for origin in edges:
+        seen: set[str] = set()
+        frontier = list(edges[origin].values())
+        while frontier:
+            node = frontier.pop()
+            if node not in seen:
+                seen.add(node)
+                frontier.extend(edges.get(node, {}).values())
+        reachable[origin] = seen
+
+    def validate(reader: Reader, file: str):
+        for name, attr, defn, target in each_attr(file):
+            annotation = defn.get(RECURSIVE_KEY)
+            recurses = target is not None and (
+                target == name or name in reachable.get(target, set())
+            )
+
+            if target is None or not recurses:
+                if annotation is not None:
+                    collector.handle(UnnecessaryRecursiveAnnotationError(attr, file))
+                continue
+
+            if annotation is None:
+                cycles = _shortest_cycles(edges, name, attr, target)
+                collector.handle(MissingRecursiveAnnotationError(attr, file, cycles[0]))
+                continue
+
+            if not isinstance(annotation, dict):
+                # Shape is the metaschema's business; nothing further to check.
+                continue
+
+            # A declared `path` has to describe how the recursion actually
+            # closes, otherwise it sends consumers down a chain that isn't there.
+            declared = annotation.get("path", ())
+            if not _closes_cycle(edges, name, target, declared):
+                collector.handle(
+                    InvalidRecursionPathError(
+                        attr,
+                        file,
+                        declared,
+                        _shortest_cycles(edges, name, attr, target),
+                    )
+                )
+
+    reader.apply(validate, ObjectMatcher())
 
 
 def validate_event_categories(

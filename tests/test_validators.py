@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import pytest
 
 from ocsf_validator.reader import DictReader, ReaderOptions
@@ -176,6 +178,249 @@ def test_validate_attr_keys():
     r["/objects/thing2.json"]["name"] = "thing3"
     with pytest.raises(InvalidAttributeTypeError):
         validate_attr_types(r)
+
+
+def _recursion_reader(annotation=None, manager_annotation=None):
+    """A schema with one direct cycle (thing.self_ref) and one two-hop cycle
+    (person.manager -> user.person), plus a non-recursive attribute."""
+    return DictReader(
+        {
+            "/objects/thing.json": {
+                "name": "thing",
+                "attributes": {
+                    "scalar": {"name": "scalar", "type": "string_t"},
+                    "other": {"name": "other", "type": "person"},
+                    "self_ref": dict(
+                        {"name": "self_ref", "type": "thing"},
+                        **({RECURSIVE_KEY: annotation} if annotation else {}),
+                    ),
+                },
+            },
+            "/objects/person.json": {
+                "name": "person",
+                "attributes": {
+                    "manager": dict(
+                        {"name": "manager", "type": "user"},
+                        **(
+                            {RECURSIVE_KEY: manager_annotation}
+                            if manager_annotation
+                            else {}
+                        ),
+                    ),
+                },
+            },
+            "/objects/user.json": {
+                "name": "user",
+                "attributes": {
+                    "person": {
+                        "name": "person",
+                        "type": "person",
+                        RECURSIVE_KEY: {"message": "m", "path": ["person.manager"]},
+                    },
+                },
+            },
+        }
+    )
+
+
+def test_validate_recursive_attrs_requires_annotation():
+    r = _recursion_reader()
+
+    with pytest.raises(MissingRecursiveAnnotationError) as exc:
+        validate_recursive_attrs(r)
+    assert exc.value.attr == "self_ref"
+    assert exc.value.cycle == [("thing", "self_ref")]
+
+
+def test_validate_recursive_attrs_accepts_annotation():
+    r = _recursion_reader(
+        annotation={"message": "Top-level only.", "limit": 1},
+        manager_annotation={"message": "Reenters via user.", "path": ["user.person"]},
+    )
+
+    # raise no errors
+    validate_recursive_attrs(r)
+
+
+def test_validate_recursive_attrs_rejects_unnecessary_annotation():
+    r = _recursion_reader(
+        manager_annotation={"message": "m", "path": ["user.person"]},
+    )
+    r["/objects/thing.json"]["attributes"]["scalar"][RECURSIVE_KEY] = {"message": "m"}
+    r["/objects/thing.json"]["attributes"]["self_ref"][RECURSIVE_KEY] = {"message": "m"}
+
+    with pytest.raises(UnnecessaryRecursiveAnnotationError) as exc:
+        validate_recursive_attrs(r)
+    assert exc.value.attr == "scalar"
+
+
+def test_validate_recursive_attrs_rejects_reference_into_a_cycle():
+    """`thing.other` reaches a cycle but is not on one, so it is not recursive."""
+    r = _recursion_reader(
+        annotation={"message": "m"},
+        manager_annotation={"message": "m", "path": ["user.person"]},
+    )
+    r["/objects/thing.json"]["attributes"]["other"][RECURSIVE_KEY] = {"message": "m"}
+
+    with pytest.raises(UnnecessaryRecursiveAnnotationError) as exc:
+        validate_recursive_attrs(r)
+    assert exc.value.attr == "other"
+
+
+def test_validate_recursive_attrs_checks_indirect_path():
+    r = _recursion_reader(
+        annotation={"message": "m"},
+        manager_annotation={"message": "m", "path": ["user.somewhere_else"]},
+    )
+
+    with pytest.raises(InvalidRecursionPathError) as exc:
+        validate_recursive_attrs(r)
+    assert exc.value.attr == "manager"
+
+
+def test_validate_recursive_attrs_rejects_path_on_direct_recursion():
+    r = _recursion_reader(
+        annotation={"message": "m", "path": ["thing.self_ref"]},
+        manager_annotation={"message": "m", "path": ["user.person"]},
+    )
+
+    with pytest.raises(InvalidRecursionPathError) as exc:
+        validate_recursive_attrs(r)
+    assert exc.value.attr == "self_ref"
+
+
+@pytest.mark.parametrize("path", [None, "person.manager", ["person.manager", 7], [{}]])
+def test_validate_recursive_attrs_reports_malformed_path(path):
+    """A `path` that is not a walk is reported, never raised.
+
+    An exception here would escape the runner's `test()` helper, which exits 0
+    and skips every later check, so a bad annotation would silently disable
+    metaschema validation.
+    """
+    r = _recursion_reader(
+        annotation={"message": "m"},
+        manager_annotation={"message": "m", "path": path},
+    )
+
+    with pytest.raises(InvalidRecursionPathError) as exc:
+        validate_recursive_attrs(r)
+    assert exc.value.attr == "manager"
+    # The message has to render whatever was in the file.
+    assert "manager" in str(exc.value)
+
+
+def _two_cycle_reader(x_path):
+    """`a.x` sits on both a two-hop and a three-hop cycle back to `a`."""
+    return DictReader(
+        {
+            "/objects/a.json": {
+                "name": "a",
+                "attributes": {
+                    "x": {
+                        "name": "x",
+                        "type": "b",
+                        RECURSIVE_KEY: {"message": "m", "path": x_path},
+                    }
+                },
+            },
+            "/objects/b.json": {
+                "name": "b",
+                "attributes": {
+                    "direct": {
+                        "name": "direct",
+                        "type": "a",
+                        RECURSIVE_KEY: {"message": "m", "path": ["a.x"]},
+                    },
+                    "detour": {
+                        "name": "detour",
+                        "type": "c",
+                        RECURSIVE_KEY: {"message": "m", "path": ["c.back", "a.x"]},
+                    },
+                },
+            },
+            "/objects/c.json": {
+                "name": "c",
+                "attributes": {
+                    "back": {
+                        "name": "back",
+                        "type": "a",
+                        RECURSIVE_KEY: {"message": "m", "path": ["a.x", "b.detour"]},
+                    }
+                },
+            },
+        }
+    )
+
+
+def test_validate_recursive_attrs_accepts_a_longer_closing_walk():
+    """`path` may name any simple cycle, not only the shortest one."""
+    # raise no errors: the three-hop walk closes just as the two-hop one does
+    validate_recursive_attrs(_two_cycle_reader(["b.detour", "c.back"]))
+    validate_recursive_attrs(_two_cycle_reader(["b.direct"]))
+
+
+def test_validate_recursive_attrs_rejects_a_walk_that_does_not_close():
+    with pytest.raises(InvalidRecursionPathError) as exc:
+        validate_recursive_attrs(_two_cycle_reader(["b.detour"]))
+    assert exc.value.attr == "x"
+
+
+def test_validate_recursive_attrs_after_process_includes():
+    """`network_proxy` only recurses once it inherits from `network_endpoint`.
+
+    This is why the check is ordered after the merge, so it is exercised
+    through `process_includes` rather than against pre-resolved attributes.
+    """
+    data = {
+        "/dictionary.json": {
+            "attributes": {
+                "proxy_endpoint": {
+                    "caption": "",
+                    "description": "",
+                    "type": "network_proxy",
+                },
+                "port": {"caption": "", "description": "", "type": "port_t"},
+            }
+        },
+        "/objects/network_endpoint.json": {
+            "name": "network_endpoint",
+            "caption": "",
+            "attributes": {"port": {"requirement": "optional"}},
+        },
+        "/objects/network_proxy.json": {
+            "name": "network_proxy",
+            "caption": "",
+            "extends": "network_endpoint",
+            "attributes": {},
+        },
+    }
+
+    # Before the merge, network_proxy has no attributes of its own and the
+    # recursion is invisible.
+    untouched = DictReader(deepcopy(data))
+    validate_recursive_attrs(untouched)
+
+    # network_endpoint gains proxy_endpoint, so network_proxy inherits it and
+    # the edge closes on itself.
+    data["/objects/network_endpoint.json"]["attributes"]["proxy_endpoint"] = {
+        "requirement": "optional"
+    }
+
+    merged = DictReader(deepcopy(data))
+    process_includes(merged)
+    with pytest.raises(MissingRecursiveAnnotationError) as exc:
+        validate_recursive_attrs(merged)
+    assert exc.value.attr == "proxy_endpoint"
+    assert exc.value.cycle == [("network_proxy", "proxy_endpoint")]
+
+    # Annotating it on network_proxy satisfies the check, and network_endpoint
+    # stays clean because nothing leads back to it.
+    data["/objects/network_proxy.json"]["attributes"]["proxy_endpoint"] = {
+        RECURSIVE_KEY: {"message": "Chains have no fixed depth."}
+    }
+    annotated = DictReader(deepcopy(data))
+    process_includes(annotated)
+    validate_recursive_attrs(annotated)
 
 
 def test_validate_observables():

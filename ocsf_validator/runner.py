@@ -23,6 +23,7 @@ from ocsf_validator.validators import (
     validate_metaschemas,
     validate_no_unknown_keys,
     validate_observables,
+    validate_recursive_attrs,
     validate_required_keys,
     validate_undefined_attrs,
     validate_unused_attrs,
@@ -129,6 +130,15 @@ class ValidatorOptions:
     constraint_member_required: int = Severity.WARN
     """A constraint member is required, so the constraint is redundant."""
 
+    missing_recursive_annotation: int = Severity.ERROR
+    """An attribute recurses but is not marked with `@recursive`."""
+
+    unnecessary_recursive_annotation: int = Severity.ERROR
+    """An attribute is marked with `@recursive` but does not recurse."""
+
+    invalid_recursion_path: int = Severity.ERROR
+    """An attribute's `@recursive.path` does not match how its recursion closes."""
+
     def severity(self, err: Exception):
         match type(err):
             case errors.MissingRequiredKeyError:
@@ -177,6 +187,12 @@ class ValidatorOptions:
                 return self.constraint_member_missing
             case errors.ConstraintMemberRequiredError:
                 return self.constraint_member_required
+            case errors.MissingRecursiveAnnotationError:
+                return self.missing_recursive_annotation
+            case errors.UnnecessaryRecursiveAnnotationError:
+                return self.unnecessary_recursive_annotation
+            case errors.InvalidRecursionPathError:
+                return self.invalid_recursion_path
             case _:
                 return Severity.INFO
 
@@ -358,6 +374,13 @@ class ValidationRunner:
             test(
                 "Attribute type references are defined",
                 lambda: validate_attr_types(reader, collector=collector, types=types),
+            )
+
+            test(
+                "Recursive attributes are marked with `@recursive`",
+                lambda: validate_recursive_attrs(
+                    reader, collector=collector, types=types
+                ),
             )
 
             test(
