@@ -18,6 +18,7 @@ INCLUDE_KEY = "$include"
 OBSERVABLE_KEY = "observable"
 OBSERVABLES_KEY = "observables"
 TYPES_KEY = "types"
+RECURSIVE_KEY = "@recursive"
 
 
 class OcsfVersion(TypedDict):
@@ -38,6 +39,17 @@ class OcsfDeprecationInfo(TypedDict):
     # rather than enforce one version's policy. Marking this Required would fail
     # every "@deprecated" in the release branches.
     superseded_by: NotRequired[Sequence[str]]
+
+
+class OcsfRecursionInfo(TypedDict):
+    message: Required[str]
+    # The maximum nesting depth producers are expected to emit, where 1 means
+    # the outermost value only. Absent when no fixed depth applies.
+    limit: NotRequired[int]
+    # The chain of attributes that closes the cycle, for recursion that reenters
+    # the attribute's type by way of other objects. Absent for direct recursion,
+    # where the attribute's type is the object that declares it.
+    path: NotRequired[Sequence[str]]
 
 
 class OcsfReference(TypedDict):
@@ -89,6 +101,7 @@ OcsfAttr = TypedDict(
         "profile": NotRequired[Optional[Sequence[str]]],
         "values": NotRequired[Sequence[Any]],
         "@deprecated": NotRequired[OcsfDeprecationInfo],
+        "@recursive": NotRequired[OcsfRecursionInfo],
         "source": NotRequired[str],
         "references": NotRequired[OcsfReferences],
     },
