@@ -141,7 +141,15 @@ def test_validate_intra_type_collisions():
 
     r["/events/event.json"] = {"name": "thing"}
     r["/objects/thing2.json"] = {"name": "thing2"}
-    # no error
+    with pytest.raises(TypeNameCollisionError) as exc:
+        validate_intra_type_collisions(r)
+    assert {exc.value.file1, exc.value.file2} == {
+        "/events/event.json",
+        "/objects/thing.json",
+    }
+
+    r["/events/event.json"] = {"name": "another"}
+    r["/extensions/example/objects/patch.json"] = {"name": "thing", "extends": "thing"}
     validate_intra_type_collisions(r)
 
 
