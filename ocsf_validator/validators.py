@@ -244,23 +244,20 @@ def validate_intra_type_collisions(
     if types is None:
         types = TypeMapping(reader)
 
-    found: dict[str, dict[str, list[str]]] = {}
+    first_file: dict[str, str] = {}
 
     def validate(reader: Reader, file: str):
-        t = str(types[file])
-        if t not in found:
-            found[t] = {}
-
-        # The patch extends case _always_ has the the same name as its base
-        if "name" in reader[file] and not _is_patch_extends(reader[file]):
-            name = reader[file]["name"]
-            if name not in found[t]:
-                found[t][name] = []
-            else:
-                collector.handle(
-                    TypeNameCollisionError(name, t, file, found[t][name][0])
-                )
-            found[t][name].append(file)
+        record = reader[file]
+        # Extension patches intentionally retain the name of their base record.
+        if "name" not in record or _is_patch_extends(record):
+            return
+        name = record["name"]
+        if name in first_file:
+            collector.handle(
+                TypeNameCollisionError(name, str(types[file]), file, first_file[name])
+            )
+        else:
+            first_file[name] = file
 
     reader.apply(validate, AnyMatcher([ObjectMatcher(), EventMatcher()]))
 

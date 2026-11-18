@@ -96,7 +96,7 @@ class ValidatorOptions:
     """Unexpected include type."""
 
     intra_type_name_collision: int = Severity.WARN
-    """Same name used multiple times within a type."""
+    """Same name used multiple times among objects and event classes."""
 
     undefined_attribute: int = Severity.WARN
     """Attributes used in a record but not defined in `dictionary.json`."""
@@ -349,7 +349,7 @@ class ValidationRunner:
             )
 
             test(
-                "Names are not used multiple times within a record type",
+                "Object and event class names are unique",
                 lambda: validate_intra_type_collisions(
                     reader, collector=collector, types=types
                 ),
